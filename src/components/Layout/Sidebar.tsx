@@ -12,10 +12,14 @@ import {
   FileText,
   Timer,
   CalendarDays,
+  ChevronLeft,
+  ChevronRight,
+  Zap,
 } from "lucide-react";
 import { Button } from "../ui/Button";
-import { Avatar, AvatarFallback } from "../ui/Avatar";
+import { Avatar, AvatarFallback, AvatarImage } from "../ui/Avatar";
 import { Separator } from "../ui/Separator";
+import { Badge } from "../ui/Badge";
 import { cn } from "../../lib/utils";
 
 interface SidebarProps {
@@ -31,56 +35,62 @@ export function Sidebar({
   onTabChange,
   onClose,
   collapsed = false,
+  onToggleCollapse,
 }: SidebarProps) {
   const { user, signOut } = useAuth();
 
   const adminTabs = [
     {
       id: "users",
-      label: "User Management",
+      label: "Team",
       icon: Users,
       description: "Manage team members",
+      badge: null,
     },
     {
       id: "timesheets",
-      label: "Weekly Timesheets",
+      label: "Weekly Reviews",
       icon: Timer,
-      description: "Review weekly submissions",
+      description: "Review submissions",
+      badge: null,
     },
     {
       id: "monthly",
-      label: "Monthly Timesheets",
+      label: "Monthly View",
       icon: CalendarDays,
-      description: "Monthly calendar view",
+      description: "Calendar overview",
+      badge: null,
     },
-    // { id: 'activity', label: 'Activity Log', icon: Activity, description: 'System logs' },
-    // { id: 'settings', label: 'Settings', icon: Settings, description: 'Configuration' },
   ];
 
   const managerTabs = [
     {
       id: "timesheets",
-      label: "Weekly Timesheets",
+      label: "Weekly Reviews",
       icon: Timer,
-      description: "Review weekly submissions",
+      description: "Review submissions",
+      badge: null,
     },
     {
       id: "monthly",
-      label: "Monthly Timesheets",
+      label: "Monthly View",
       icon: CalendarDays,
-      description: "Monthly calendar view",
+      description: "Calendar overview",
+      badge: null,
     },
     {
       id: "calendar",
       label: "Calendar",
       icon: Calendar,
       description: "Schedule view",
+      badge: "Soon",
     },
     {
       id: "reports",
-      label: "Reports",
-      icon: FileText,
-      description: "Analytics",
+      label: "Analytics",
+      icon: BarChart3,
+      description: "Performance insights",
+      badge: null,
     },
   ];
 
@@ -91,97 +101,115 @@ export function Sidebar({
     if (onClose) onClose();
   };
 
+  const getRoleColor = (role: string) => {
+    switch (role) {
+      case "admin":
+        return "bg-red-500";
+      case "manager":
+        return "bg-blue-500";
+      default:
+        return "bg-gray-500";
+    }
+  };
+
   return (
     <div
       className={cn(
-        "flex h-full flex-col bg-background border-r ease-in-out",
-        collapsed ? "w-16" : "w-60"
+        "flex h-full flex-col bg-white border-r border-border transition-all duration-300 ease-in-out",
+        collapsed ? "w-16" : "w-64"
       )}
     >
       {/* Header */}
-      <div
-        className={cn(
-          "flex items-center  ease-in-out",
-          collapsed ? "justify-center p-4" : "justify-between p-2"
-        )}
-      >
+      <div className="flex items-center justify-between p-4 border-b border-border">
         {!collapsed && (
-          <div className="flex items-center space-x-3 opacity-100 transition-opacity duration-300">
-            <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-primary text-primary-foreground">
-              <Timer className="h-4 w-4" />
+          <div className="flex items-center space-x-3">
+            <div className="flex h-8 w-8 items-center justify-center rounded-xl bg-gradient-to-br from-blue-500 to-purple-600 shadow-soft">
+              <Zap className="h-4 w-4 text-white" />
             </div>
             <div>
-              <h2 className="text-lg font-semibold">NileTracker</h2>
+              <h2 className="text-lg font-bold text-foreground">TimeTracker</h2>
               <p className="text-xs text-muted-foreground capitalize">
-                {user?.role}
+                {user?.role} Dashboard
               </p>
             </div>
           </div>
         )}
 
         {collapsed && (
-          <div className="flex h-7 w-7 items-center justify-center rounded-lg bg-primary text-primary-foreground transition-all duration-300">
-            <Timer className="h-4 w-4" />
+          <div className="flex h-8 w-8 items-center justify-center rounded-xl bg-gradient-to-br from-blue-500 to-purple-600 shadow-soft mx-auto">
+            <Zap className="h-4 w-4 text-white" />
           </div>
         )}
 
+        {/* Mobile close button */}
         {onClose && !collapsed && (
           <Button
             variant="ghost"
-            size="icon"
+            size="icon-sm"
             onClick={onClose}
-            className="lg:hidden opacity-100 transition-all duration-200 hover:bg-muted/80"
+            className="lg:hidden"
           >
             <X className="h-4 w-4" />
           </Button>
         )}
+
+        {/* Desktop collapse toggle */}
+        {onToggleCollapse && (
+          <Button
+            variant="ghost"
+            size="icon-sm"
+            onClick={onToggleCollapse}
+            className="hidden lg:flex"
+            title={collapsed ? "Expand sidebar" : "Collapse sidebar"}
+          >
+            {collapsed ? (
+              <ChevronRight className="h-4 w-4" />
+            ) : (
+              <ChevronLeft className="h-4 w-4" />
+            )}
+          </Button>
+        )}
       </div>
 
-      <Separator />
-
       {/* Navigation */}
-      <nav
-        className={cn(
-          "flex-1 space-y-1 transition-all duration-300 ease-in-out",
-          collapsed ? "p-2" : "p-4"
-        )}
-      >
+      <nav className="flex-1 p-4 space-y-2 overflow-y-auto scrollbar-thin">
         {tabs.map((tab) => {
           const Icon = tab.icon;
           const isActive = activeTab === tab.id;
+          
           return (
             <Button
               key={tab.id}
               variant={isActive ? "secondary" : "ghost"}
               className={cn(
-                "w-full transition-all duration-200 ease-in-out",
-                collapsed
-                  ? "h-10 w-10 p-0 justify-center"
-                  : "h-auto p-3 justify-start",
-                isActive && "bg-secondary shadow-sm",
-                !collapsed && "hover:bg-muted/60 hover:translate-x-1"
+                "w-full justify-start transition-all duration-200",
+                collapsed ? "px-0 justify-center" : "px-3",
+                isActive && "bg-primary/10 text-primary border border-primary/20 shadow-soft",
+                !isActive && "hover:bg-accent/50"
               )}
               onClick={() => handleTabChange(tab.id)}
               title={collapsed ? tab.label : undefined}
             >
               <Icon
                 className={cn(
-                  "h-4 w-4 flex-shrink-0 transition-all duration-200",
-                  collapsed ? "" : "mr-3",
+                  "h-4 w-4 flex-shrink-0",
+                  !collapsed && "mr-3",
                   isActive && "text-primary"
                 )}
               />
               {!collapsed && (
-                <div
-                  className={cn(
-                    "flex flex-col items-start transition-all duration-300 ease-in-out",
-                    collapsed ? "opacity-0 w-0" : "opacity-100"
-                  )}
-                >
-                  <span className="font-medium">{tab.label}</span>
-                  <span className="text-xs text-muted-foreground">
+                <div className="flex-1 text-left">
+                  <div className="flex items-center justify-between">
+                    <span className="font-medium">{tab.label}</span>
+                    {tab.badge && (
+                      <Badge variant="secondary" size="sm">
+                        {tab.badge}
+                      </Badge>
+                    )}
+                  </div>
+                  <div className="text-xs text-muted-foreground mt-0.5">
                     {tab.description}
-                  </span>
+                  </div>
                 </div>
               )}
             </Button>
@@ -192,23 +220,26 @@ export function Sidebar({
       <Separator />
 
       {/* User Profile */}
-      <div
-        className={cn(
-          "transition-all duration-300 ease-in-out",
-          collapsed ? "p-2" : "p-4 space-y-4"
-        )}
-      >
+      <div className="p-4">
         {!collapsed ? (
-          <div className="space-y-4 transition-all duration-300 ease-in-out">
-            <div className="flex items-center space-x-3">
-              <Avatar className="h-8 w-8 transition-all duration-200 hover:scale-105">
-                <AvatarFallback className="text-xs">
-                  {user?.fullName?.slice(0, 2).toUpperCase() ||
-                    user?.email?.slice(0, 2).toUpperCase()}
-                </AvatarFallback>
-              </Avatar>
-              <div className="flex-1 min-w-0 transition-all duration-300">
-                <p className="text-sm font-medium truncate">
+          <div className="space-y-4">
+            {/* User Info Card */}
+            <div className="flex items-center space-x-3 p-3 rounded-xl bg-accent/50 border border-border/50">
+              <div className="relative">
+                <Avatar className="h-10 w-10 border-2 border-background shadow-soft">
+                  <AvatarImage src={user?.photoURL} alt={user?.fullName} />
+                  <AvatarFallback className="bg-gradient-to-br from-blue-500 to-purple-600 text-white font-semibold">
+                    {user?.fullName?.slice(0, 2).toUpperCase() ||
+                      user?.email?.slice(0, 2).toUpperCase()}
+                  </AvatarFallback>
+                </Avatar>
+                <div className={cn(
+                  "absolute -bottom-0.5 -right-0.5 w-3 h-3 rounded-full border-2 border-white",
+                  getRoleColor(user?.role || "employee")
+                )} />
+              </div>
+              <div className="flex-1 min-w-0">
+                <p className="text-sm font-medium text-foreground truncate">
                   {user?.fullName || "User"}
                 </p>
                 <p className="text-xs text-muted-foreground truncate">
@@ -217,32 +248,40 @@ export function Sidebar({
               </div>
             </div>
 
+            {/* Sign Out Button */}
             <Button
               variant="outline"
               size="sm"
               onClick={signOut}
-              className="w-full transition-all duration-200 hover:bg-destructive hover:text-destructive-foreground hover:border-destructive"
+              className="w-full text-red-600 border-red-200 hover:bg-red-50 hover:border-red-300"
+              leftIcon={<LogOut className="h-4 w-4" />}
             >
-              <LogOut className="mr-2 h-4 w-4" />
               Sign Out
             </Button>
           </div>
         ) : (
-          <div className="space-y-2 transition-all duration-300 ease-in-out">
-            <div className="flex justify-center">
-              <Avatar className="h-8 w-8 transition-all duration-200 hover:scale-105">
-                <AvatarFallback className="text-xs">
+          <div className="space-y-3 flex flex-col items-center">
+            {/* Collapsed User Avatar */}
+            <div className="relative">
+              <Avatar className="h-10 w-10 border-2 border-background shadow-soft">
+                <AvatarImage src={user?.photoURL} alt={user?.fullName} />
+                <AvatarFallback className="bg-gradient-to-br from-blue-500 to-purple-600 text-white font-semibold">
                   {user?.fullName?.slice(0, 2).toUpperCase() ||
                     user?.email?.slice(0, 2).toUpperCase()}
                 </AvatarFallback>
               </Avatar>
+              <div className={cn(
+                "absolute -bottom-0.5 -right-0.5 w-3 h-3 rounded-full border-2 border-white",
+                getRoleColor(user?.role || "employee")
+              )} />
             </div>
 
+            {/* Collapsed Sign Out Button */}
             <Button
               variant="outline"
-              size="icon"
+              size="icon-sm"
               onClick={signOut}
-              className="w-full h-8 transition-all duration-200 hover:bg-destructive hover:text-destructive-foreground hover:border-destructive"
+              className="text-red-600 border-red-200 hover:bg-red-50 hover:border-red-300"
               title="Sign Out"
             >
               <LogOut className="h-4 w-4" />

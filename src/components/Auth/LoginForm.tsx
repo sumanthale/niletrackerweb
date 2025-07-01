@@ -2,15 +2,12 @@ import React, { useState, useRef, useCallback } from 'react';
 import { useAuth } from '../../contexts/AuthContext';
 import { Button } from '../ui/Button';
 import { Input } from '../ui/Input';
-import {
-  Card, CardContent, CardDescription, CardHeader, CardTitle
-} from '../ui/Card';
-import { Timer, Mail, Lock, Eye, EyeOff, Loader2 } from 'lucide-react';
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '../ui/Card';
+import { Zap, Mail, Lock, AlertCircle } from 'lucide-react';
 
 export function LoginForm() {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
-  const [showPassword, setShowPassword] = useState(false);
   const [loading, setLoading] = useState(false);
   const [errorMessage, setErrorMessage] = useState('');
   const { signIn } = useAuth();
@@ -21,11 +18,12 @@ export function LoginForm() {
       e.preventDefault();
       setLoading(true);
       setErrorMessage('');
+      
       try {
         await signIn(email, password);
       } catch (error) {
         console.error('Login failed:', error);
-        setErrorMessage('Invalid credentials or server error.');
+        setErrorMessage('Invalid credentials. Please check your email and password.');
       } finally {
         setLoading(false);
       }
@@ -42,36 +40,39 @@ export function LoginForm() {
   }, []);
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-muted/50 p-4">
-      <div className="w-full max-w-md space-y-6">
+    <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-gray-25 via-white to-gray-50 p-4">
+      <div className="w-full max-w-md space-y-8 animate-fade-in">
         {/* Header */}
-        <div className="text-center space-y-2">
+        <div className="text-center space-y-4">
           <div className="flex justify-center">
-            <div className="flex h-12 w-12 items-center justify-center rounded-lg bg-primary text-primary-foreground">
-              <Timer className="h-6 w-6" />
+            <div className="flex h-16 w-16 items-center justify-center rounded-3xl bg-gradient-to-br from-blue-500 to-purple-600 shadow-strong">
+              <Zap className="h-8 w-8 text-white" />
             </div>
           </div>
-          <h1 className="text-2xl font-semibold tracking-tight">Welcome back</h1>
-          <p className="text-sm text-muted-foreground">
-            Sign in to your TimeTracker account
-          </p>
+          <div className="space-y-2">
+            <h1 className="text-3xl font-bold tracking-tight text-foreground">Welcome back</h1>
+            <p className="text-muted-foreground">
+              Sign in to your TimeTracker dashboard
+            </p>
+          </div>
         </div>
 
-        {/* Card Form */}
-        <Card>
-          <CardHeader className="space-y-1">
-            <CardTitle className="text-xl">Sign in</CardTitle>
+        {/* Login Card */}
+        <Card variant="elevated" className="border-0 shadow-strong">
+          <CardHeader className="space-y-1 text-center">
+            <CardTitle className="text-xl">Sign in to continue</CardTitle>
             <CardDescription>
               Enter your credentials to access your dashboard
             </CardDescription>
           </CardHeader>
 
-          <CardContent className="space-y-4">
+          <CardContent className="space-y-6">
             <form onSubmit={handleSubmit} className="space-y-4" noValidate>
-              <div className="space-y-2">
-                <label htmlFor="email" className="text-sm font-medium">Email</label>
-                <div className="relative">
-                  <Mail className="absolute left-3 top-3 h-4 w-4 text-muted-foreground" />
+              <div className="space-y-4">
+                <div className="space-y-2">
+                  <label htmlFor="email" className="text-sm font-medium text-foreground">
+                    Email address
+                  </label>
                   <Input
                     ref={emailInputRef}
                     id="email"
@@ -79,54 +80,90 @@ export function LoginForm() {
                     placeholder="name@company.com"
                     value={email}
                     onChange={(e) => setEmail(e.target.value)}
-                    className="pl-10"
+                    leftIcon={<Mail className="w-4 h-4" />}
                     autoComplete="email"
                     required
-                    aria-label="Email address"
+                    error={!!errorMessage}
                   />
                 </div>
-              </div>
 
-              <div className="space-y-2">
-                <label htmlFor="password" className="text-sm font-medium">Password</label>
-                <div className="relative">
-                  <Lock className="absolute left-3 top-3 h-4 w-4 text-muted-foreground" />
+                <div className="space-y-2">
+                  <label htmlFor="password" className="text-sm font-medium text-foreground">
+                    Password
+                  </label>
                   <Input
                     id="password"
-                    type={showPassword ? 'text' : 'password'}
+                    type="password"
                     placeholder="Enter your password"
                     value={password}
                     onChange={(e) => setPassword(e.target.value)}
-                    className="pl-10 pr-10"
+                    leftIcon={<Lock className="w-4 h-4" />}
                     autoComplete="current-password"
                     required
-                    aria-label="Password"
+                    error={!!errorMessage}
                   />
-                  <Button
-                    type="button"
-                    variant="ghost"
-                    size="icon"
-                    className="absolute right-1 top-1 h-7 w-7"
-                    onClick={() => setShowPassword(!showPassword)}
-                    aria-label={showPassword ? 'Hide password' : 'Show password'}
-                  >
-                    {showPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
-                  </Button>
                 </div>
               </div>
 
               {errorMessage && (
-                <div className="text-sm text-red-500">{errorMessage}</div>
+                <div className="flex items-center gap-2 p-3 rounded-xl bg-red-50 border border-red-200 text-red-700">
+                  <AlertCircle className="w-4 h-4 flex-shrink-0" />
+                  <span className="text-sm">{errorMessage}</span>
+                </div>
               )}
 
-              <Button type="submit" className="w-full" disabled={loading}>
-                {loading && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-                Sign in
+              <Button 
+                type="submit" 
+                className="w-full" 
+                size="lg"
+                loading={loading}
+                disabled={!email || !password}
+              >
+                {loading ? 'Signing in...' : 'Sign in'}
               </Button>
             </form>
 
+            {/* Demo Section */}
+            <div className="space-y-4">
+              <div className="relative">
+                <div className="absolute inset-0 flex items-center">
+                  <span className="w-full border-t border-border" />
+                </div>
+                <div className="relative flex justify-center text-xs uppercase">
+                  <span className="bg-background px-2 text-muted-foreground">Demo Access</span>
+                </div>
+              </div>
+
+              <div className="grid grid-cols-2 gap-3">
+                <Button
+                  type="button"
+                  variant="outline"
+                  size="sm"
+                  onClick={() => handleDemoLogin('admin@demo.com', 'demo123')}
+                  className="text-xs"
+                >
+                  Admin Demo
+                </Button>
+                <Button
+                  type="button"
+                  variant="outline"
+                  size="sm"
+                  onClick={() => handleDemoLogin('manager@demo.com', 'demo123')}
+                  className="text-xs"
+                >
+                  Manager Demo
+                </Button>
+              </div>
+            </div>
           </CardContent>
         </Card>
+
+        {/* Footer */}
+        <div className="text-center">
+          <p className="text-xs text-muted-foreground">
+            Professional time tracking for modern teams
+          </p>
+        </div>
       </div>
     </div>
   );
