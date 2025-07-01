@@ -11,13 +11,7 @@ import {
 import { db } from "../../lib/firebase";
 import { useAuth } from "../../contexts/AuthContext";
 import { TimeSession, User } from "../../types";
-import {
-  Card,
-  CardContent,
-  CardDescription,
-  CardHeader,
-  CardTitle,
-} from "../ui/Card";
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "../ui/Card";
 import { Button } from "../ui/Button";
 import { Badge } from "../ui/Badge";
 import { Avatar, AvatarFallback, AvatarImage } from "../ui/Avatar";
@@ -42,8 +36,6 @@ import {
   Camera,
   MessageSquare,
   CalendarDays,
-  Grid3X3,
-  List,
   Download,
   RefreshCw,
   PlayCircle,
@@ -53,6 +45,10 @@ import {
   Search,
   User as UserIcon,
   MoreHorizontal,
+  FileText,
+  Sparkles,
+  Award,
+  TrendingDown,
 } from "lucide-react";
 import {
   formatDuration,
@@ -62,9 +58,9 @@ import {
   getWeekDateRange,
 } from "../../lib/utils";
 import { SessionDetailsModal } from "./SessionDetailsModal";
-import { WeeklyCalendarView } from "./WeeklyCalendarView";
 import { cn } from "../../lib/utils";
 import toast from "react-hot-toast";
+import StatCard from "../Common/StatCard";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -87,11 +83,8 @@ export function TimesheetManagement() {
   const [selectedUser, setSelectedUser] = useState<string>("");
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
-  const [selectedSession, setSelectedSession] = useState<TimeSession | null>(
-    null
-  );
+  const [selectedSession, setSelectedSession] = useState<TimeSession | null>(null);
   const [showSessionModal, setShowSessionModal] = useState(false);
-  const [viewMode, setViewMode] = useState<"list" | "calendar">("list");
   const [currentWeek, setCurrentWeek] = useState(new Date());
 
   // Memoized stats calculation
@@ -112,6 +105,7 @@ export function TimesheetManagement() {
       totalMinutes > 0 ? Math.round((activeMinutes / totalMinutes) * 100) : 0;
 
     return {
+      totalSessions: sessions.length,
       pending,
       approved,
       disapproved,
@@ -119,6 +113,7 @@ export function TimesheetManagement() {
       idleMinutes,
       activeMinutes,
       productivityRate,
+      averageSessionLength: sessions.length > 0 ? totalMinutes / sessions.length : 0,
     };
   }, [sessions]);
 
@@ -182,7 +177,6 @@ export function TimesheetManagement() {
     if (selectedUser) {
       fetchUserSessions(selectedUser);
     } else {
-      // Clear sessions when no user is selected
       setSessions([]);
     }
   }, [selectedUser, currentWeek]);
@@ -223,7 +217,6 @@ export function TimesheetManagement() {
           : usersData;
 
       setUsers(filteredUsers);
-      // Don't auto-select any user - let user choose
       setLoading(false);
     } catch (error) {
       console.error("Error fetching users:", error);
@@ -236,8 +229,7 @@ export function TimesheetManagement() {
     async (userId: string) => {
       try {
         setRefreshing(true);
-        const { start: startDate, end: endDate } =
-          getWeekDateRange(currentWeek);
+        const { start: startDate, end: endDate } = getWeekDateRange(currentWeek);
 
         const sessionsQuery = query(
           collection(db, "sessions"),
@@ -351,36 +343,25 @@ export function TimesheetManagement() {
     }
   }, []);
 
-  const getRoleBadgeVariant = useCallback((role: string) => {
-    switch (role) {
-      case "admin":
-        return "destructive";
-      case "manager":
-        return "default";
-      default:
-        return "secondary";
-    }
-  }, []);
-
   // Custom option component for react-select
   const CustomOption = ({ data, ...props }: any) => (
     <div
       {...props.innerProps}
-      className="flex items-center gap-3 p-3 hover:bg-gray-50 cursor-pointer"
+      className="flex items-center gap-3 p-3 hover:bg-gray-50 cursor-pointer transition-colors"
     >
-      <Avatar className="h-8 w-8">
+      <Avatar className="h-8 w-8 border border-border shadow-soft">
         <AvatarImage src={data.user.photoURL} alt={data.user.fullName} />
-        <AvatarFallback className="text-xs">
+        <AvatarFallback className="text-xs bg-gradient-to-br from-blue-500 to-purple-600 text-white">
           {data.user.fullName?.slice(0, 2).toUpperCase() ||
             data.user.email?.slice(0, 2).toUpperCase()}
         </AvatarFallback>
       </Avatar>
       <div className="flex-1">
-        <div className="font-medium text-gray-900">{data.user.fullName}</div>
-        <div className="text-sm text-gray-500">{data.user.email}</div>
+        <div className="font-semibold text-foreground">{data.user.fullName}</div>
+        <div className="text-sm text-muted-foreground">{data.user.email}</div>
         <div className="flex items-center gap-1 mt-1">
           {getRoleIcon(data.user.role)}
-          <span className="text-xs text-gray-600 capitalize">
+          <span className="text-xs text-muted-foreground capitalize">
             {data.user.role}
           </span>
         </div>
@@ -391,14 +372,14 @@ export function TimesheetManagement() {
   // Custom single value component for react-select
   const CustomSingleValue = ({ data }: any) => (
     <div className="flex items-center gap-2">
-      <Avatar className="h-6 w-6">
+      <Avatar className="h-6 w-6 border border-border">
         <AvatarImage src={data.user.photoURL} alt={data.user.fullName} />
-        <AvatarFallback className="text-xs">
+        <AvatarFallback className="text-xs bg-gradient-to-br from-blue-500 to-purple-600 text-white">
           {data.user.fullName?.slice(0, 2).toUpperCase() ||
             data.user.email?.slice(0, 2).toUpperCase()}
         </AvatarFallback>
       </Avatar>
-      <span className="font-medium">{data.user.fullName}</span>
+      <span className="font-semibold">{data.user.fullName}</span>
     </div>
   );
 
@@ -409,10 +390,11 @@ export function TimesheetManagement() {
       minHeight: "48px",
       border: "2px solid #e5e7eb",
       borderRadius: "12px",
-      boxShadow: state.isFocused ? "0 0 0 3px rgba(59, 130, 246, 0.1)" : "none",
+      boxShadow: state.isFocused ? "0 0 0 3px rgba(59, 130, 246, 0.1)" : "0 2px 8px rgba(0, 0, 0, 0.04)",
       borderColor: state.isFocused ? "#3b82f6" : "#e5e7eb",
       "&:hover": {
         borderColor: "#d1d5db",
+        boxShadow: "0 4px 16px rgba(0, 0, 0, 0.08)",
       },
     }),
     option: (provided: any, state: any) => ({
@@ -441,8 +423,7 @@ export function TimesheetManagement() {
       ...provided,
       border: "1px solid #e5e7eb",
       borderRadius: "12px",
-      boxShadow:
-        "0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04)",
+      boxShadow: "0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04)",
       zIndex: 50,
     }),
     menuList: (provided: any) => ({
@@ -460,20 +441,20 @@ export function TimesheetManagement() {
       render: (session: TimeSession) => (
         <div className="space-y-2">
           <div className="flex items-center gap-2">
-            <div className="w-2 h-2 bg-blue-500 rounded-full"></div>
-            <span className="font-medium text-gray-900">
+            <div className="w-2 h-2 bg-blue-500 rounded-full shadow-glow"></div>
+            <span className="font-semibold text-foreground">
               {formatDate(session.date)}
             </span>
           </div>
-          <div className="flex items-center gap-3 text-sm text-gray-600">
-            <div className="flex items-center gap-1">
-              <PlayCircle className="w-3 h-3 text-green-600" />
-              <span>{formatTime(session.clockIn)}</span>
+          <div className="flex items-center gap-3 text-sm">
+            <div className="flex items-center gap-1 text-emerald-600">
+              <PlayCircle className="w-3 h-3" />
+              <span className="font-medium">{formatTime(session.clockIn)}</span>
             </div>
             {session.clockOut && (
-              <div className="flex items-center gap-1">
-                <PauseCircle className="w-3 h-3 text-red-600" />
-                <span>{formatTime(session.clockOut)}</span>
+              <div className="flex items-center gap-1 text-red-600">
+                <PauseCircle className="w-3 h-3" />
+                <span className="font-medium">{formatTime(session.clockOut)}</span>
               </div>
             )}
           </div>
@@ -482,7 +463,7 @@ export function TimesheetManagement() {
     },
     {
       key: "duration",
-      header: "Duration & Productivity",
+      header: "Duration & Performance",
       render: (session: TimeSession) => {
         const activeMinutes = session.totalMinutes - session.idleMinutes;
         const productivityRate =
@@ -494,23 +475,32 @@ export function TimesheetManagement() {
           <div className="space-y-3">
             <div className="flex items-center gap-2">
               <Clock className="w-4 h-4 text-blue-500" />
-              <span className="font-semibold text-gray-900">
+              <span className="font-bold text-foreground text-lg">
                 {formatDuration(session.totalMinutes)}
               </span>
             </div>
 
-            <div className="space-y-1">
-              <div className="flex items-center  gap-4 text-xs">
-                <span className="text-gray-500">Active</span>
-                <span className="font-medium text-green-600">
+            <div className="space-y-2">
+              <div className="flex items-center justify-between text-sm">
+                <span className="text-muted-foreground">Active</span>
+                <span className="font-semibold text-emerald-600">
                   {formatDuration(activeMinutes)}
                 </span>
               </div>
-              <div className="flex items-center  gap-4 text-xs">
-                <span className="text-gray-500">Idle</span>
-                <span className="font-medium text-orange-600">
+              <div className="flex items-center justify-between text-sm">
+                <span className="text-muted-foreground">Idle</span>
+                <span className="font-semibold text-amber-600">
                   {formatDuration(session.idleMinutes)}
                 </span>
+              </div>
+              <div className="flex items-center justify-between text-sm">
+                <span className="text-muted-foreground">Productivity</span>
+                <Badge 
+                  variant={productivityRate >= 80 ? "success" : productivityRate >= 60 ? "warning" : "destructive"}
+                  size="sm"
+                >
+                  {productivityRate}%
+                </Badge>
               </div>
             </div>
           </div>
@@ -519,32 +509,42 @@ export function TimesheetManagement() {
     },
     {
       key: "activity",
-      header: "Activity & Notes",
+      header: "Activity & Evidence",
       render: (session: TimeSession) => (
         <div className="space-y-3">
           {session.screenshots.length > 0 && (
             <div className="flex items-center gap-2">
               <Camera className="w-4 h-4 text-purple-500" />
-              <span className="text-sm font-medium text-gray-700">
+              <span className="text-sm font-semibold text-foreground">
                 {session.screenshots.length} screenshots
               </span>
-              <div className="flex -space-x-1">
-                {session.screenshots.slice(0, 3).map((screenshot, idx) => (
-                  <img
-                    key={screenshot.id}
-                    src={screenshot.image}
-                    alt="Screenshot"
-                    className="w-6 h-6 rounded border-2 border-white object-cover shadow-sm"
-                  />
-                ))}
-                {session.screenshots.length > 3 && (
-                  <div className="w-6 h-6 rounded border-2 border-white bg-gray-100 flex items-center justify-center shadow-sm">
-                    <span className="text-xs font-medium text-gray-600">
-                      +{session.screenshots.length - 3}
-                    </span>
-                  </div>
-                )}
-              </div>
+            </div>
+          )}
+          
+          {session.screenshots.length > 0 && (
+            <div className="flex -space-x-1">
+              {session.screenshots.slice(0, 4).map((screenshot, idx) => (
+                <img
+                  key={screenshot.id}
+                  src={screenshot.image}
+                  alt="Screenshot"
+                  className="w-8 h-8 rounded-lg border-2 border-white object-cover shadow-soft hover:scale-110 transition-transform cursor-pointer"
+                />
+              ))}
+              {session.screenshots.length > 4 && (
+                <div className="w-8 h-8 rounded-lg border-2 border-white bg-gradient-to-br from-gray-100 to-gray-200 flex items-center justify-center shadow-soft">
+                  <span className="text-xs font-bold text-gray-600">
+                    +{session.screenshots.length - 4}
+                  </span>
+                </div>
+              )}
+            </div>
+          )}
+
+          {session.lessHoursComment && (
+            <div className="flex items-center gap-2">
+              <MessageSquare className="w-4 h-4 text-blue-500" />
+              <span className="text-sm font-medium text-blue-600">Has comment</span>
             </div>
           )}
         </div>
@@ -553,20 +553,28 @@ export function TimesheetManagement() {
     {
       key: "status",
       header: "Status",
-      render: (session: TimeSession) => (
-        <Badge className={cn(getStatusColor(session.status), "font-medium")}>
-          {session.status === "submitted" && (
-            <AlertCircle className="w-3 h-3 mr-1" />
-          )}
-          {session.status === "approved" && (
-            <CheckCircle className="w-3 h-3 mr-1" />
-          )}
-          {session.status === "disapproved" && (
-            <XCircle className="w-3 h-3 mr-1" />
-          )}
-          {session.status}
-        </Badge>
-      ),
+      render: (session: TimeSession) => {
+        const getStatusIcon = (status: string) => {
+          switch (status) {
+            case "approved":
+              return <CheckCircle className="w-3 h-3" />;
+            case "disapproved":
+              return <XCircle className="w-3 h-3" />;
+            default:
+              return <AlertCircle className="w-3 h-3" />;
+          }
+        };
+
+        return (
+          <Badge 
+            className={cn(getStatusColor(session.status), "font-semibold gap-1.5")}
+            size="default"
+          >
+            {getStatusIcon(session.status)}
+            <span className="capitalize">{session.status}</span>
+          </Badge>
+        );
+      },
     },
     {
       key: "actions",
@@ -574,13 +582,12 @@ export function TimesheetManagement() {
       render: (session: TimeSession) => (
         <DropdownMenu>
           <DropdownMenuTrigger asChild>
-            <Button variant="ghost" className="h-8 w-8 p-0">
-              <span className="sr-only">Open menu</span>
+            <Button variant="ghost" size="icon-sm" className="hover:bg-accent">
               <MoreHorizontal className="h-4 w-4" />
             </Button>
           </DropdownMenuTrigger>
-          <DropdownMenuContent align="end">
-            <DropdownMenuLabel>Actions</DropdownMenuLabel>
+          <DropdownMenuContent align="end" className="w-48">
+            <DropdownMenuLabel>Session Actions</DropdownMenuLabel>
             <DropdownMenuSeparator />
             <DropdownMenuItem
               onClick={() => handleViewSession(session)}
@@ -598,17 +605,17 @@ export function TimesheetManagement() {
                       approvalStatus: "approved",
                     })
                   }
-                  className="gap-2"
+                  className="gap-2 text-emerald-600"
                 >
                   <CheckCircle className="h-4 w-4" />
                   Quick Approve
                 </DropdownMenuItem>
                 <DropdownMenuItem
                   onClick={() => handleViewSession(session)}
-                  className="gap-2"
+                  className="gap-2 text-red-600"
                 >
                   <XCircle className="h-4 w-4" />
-                  Quick Reject
+                  Review & Reject
                 </DropdownMenuItem>
               </>
             )}
@@ -622,7 +629,7 @@ export function TimesheetManagement() {
     return (
       <div className="flex items-center justify-center h-64">
         <div className="text-center space-y-4">
-          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary mx-auto"></div>
+          <div className="w-12 h-12 border-4 border-primary/20 border-t-primary rounded-full animate-spin mx-auto"></div>
           <p className="text-sm text-muted-foreground">Loading timesheets...</p>
         </div>
       </div>
@@ -633,7 +640,7 @@ export function TimesheetManagement() {
     return (
       <div className="text-center py-16">
         <div className="max-w-md mx-auto space-y-6">
-          <div className="w-16 h-16 bg-muted rounded-2xl flex items-center justify-center mx-auto">
+          <div className="w-16 h-16 bg-muted rounded-3xl flex items-center justify-center mx-auto">
             <Users className="w-8 h-8 text-muted-foreground" />
           </div>
           <div>
@@ -652,110 +659,102 @@ export function TimesheetManagement() {
   }
 
   return (
-    <div className="space-y-6">
-      {/* Header Section */}
-      <div className="space-y-6">
-        {/* Header Section */}
-        <div className="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
-          {/* Title & Description */}
-          <div className="space-y-1.5">
-            <h1 className="text-xl font-bold tracking-tight text-gray-900 sm:text-2xl">
-              {user?.role === "admin"
-                ? "All User Timesheets"
-                : "Weekly Timesheets"}
-            </h1>
-            <p className="text-sm text-gray-600 sm:text-base">
-              {user?.role === "admin"
-                ? "Review and manage timesheets for all users in the system."
-                : "Review and approve employee weekly timesheets."}
-            </p>
-          </div>
+    <div className="space-y-8 animate-fade-in">
+      {/* Enhanced Header */}
+      <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-4">
+        <div className="space-y-1">
+          <h1 className="text-3xl font-bold tracking-tight text-foreground flex items-center gap-3">
+            <div className="p-2 bg-gradient-to-br from-emerald-500 to-blue-600 rounded-2xl text-white shadow-medium">
+              <Timer className="w-6 h-6" />
+            </div>
+            {user?.role === "admin" ? "All Timesheets" : "Weekly Reviews"}
+          </h1>
+          <p className="text-muted-foreground text-lg">
+            {user?.role === "admin"
+              ? "Review and manage timesheets for all users in the system"
+              : "Review and approve employee weekly timesheets"}
+          </p>
+        </div>
 
-          {/* Action Buttons */}
-          <div className="flex flex-wrap items-center gap-2 sm:gap-3">
-            <Button
-              variant="outline"
-              size="sm"
-              onClick={() => selectedUser && fetchUserSessions(selectedUser)}
-              disabled={refreshing || !selectedUser}
-              className="flex items-center gap-2"
-            >
-              <RefreshCw
-                className={cn("w-4 h-4", refreshing && "animate-spin")}
-              />
-              <span className="hidden sm:inline">Refresh</span>
-            </Button>
-          </div>
+        <div className="flex items-center gap-3">
+          <Button
+            variant="outline"
+            onClick={() => selectedUser && fetchUserSessions(selectedUser)}
+            disabled={refreshing || !selectedUser}
+            leftIcon={<RefreshCw className={cn("w-4 h-4", refreshing && "animate-spin")} />}
+          >
+            Refresh
+          </Button>
+          <Button
+            variant="outline"
+            leftIcon={<Download className="w-4 h-4" />}
+            disabled={!selectedUser}
+          >
+            Export
+          </Button>
         </div>
       </div>
 
-      {/* Enhanced User Selection Card */}
-
+      {/* Enhanced User Selection */}
       {selectedUserData ? (
-        <Card className="border-2 border-blue-200 bg-gradient-to-r from-blue-50/50 to-indigo-50/50 shadow-lg mb-4">
-          <CardContent className="flex items-center gap-4 p-4">
-            <Avatar className="h-10 w-10">
-              <AvatarImage
-                src={selectedUserData.photoURL}
-                alt={selectedUserData.fullName}
-              />
-              <AvatarFallback className="text-xs">
+        <Card variant="elevated" className="border-2 border-emerald-200 bg-gradient-to-r from-emerald-50/50 to-blue-50/50 shadow-medium">
+          <CardContent className="flex items-center gap-4 p-6">
+            <Avatar className="h-12 w-12 border-2 border-white shadow-medium">
+              <AvatarImage src={selectedUserData.photoURL} alt={selectedUserData.fullName} />
+              <AvatarFallback className="bg-gradient-to-br from-emerald-500 to-blue-600 text-white font-bold">
                 {selectedUserData.fullName?.slice(0, 2).toUpperCase() ||
                   selectedUserData.email?.slice(0, 2).toUpperCase()}
               </AvatarFallback>
             </Avatar>
             <div className="flex-1">
-              <div className="font-semibold text-gray-900">
+              <div className="font-bold text-foreground text-lg">
                 {selectedUserData.fullName}
               </div>
-              <div className="text-sm text-gray-600">
+              <div className="text-sm text-muted-foreground">
                 {selectedUserData.email}
               </div>
-              <Badge
-                variant={getRoleBadgeVariant(selectedUserData.role)}
-                className="mt-1 gap-1 text-xs capitalize"
-              >
+              <Badge variant="outline" className="mt-2 gap-1 bg-white/80">
                 {getRoleIcon(selectedUserData.role)}
-                {selectedUserData.role}
+                <span className="capitalize font-medium">{selectedUserData.role}</span>
               </Badge>
+            </div>
+            <div className="text-right">
+              <div className="text-2xl font-bold text-emerald-600">
+                {formatDuration(stats.totalMinutes)}
+              </div>
+              <div className="text-sm text-muted-foreground">
+                Total this week
+              </div>
             </div>
             <Button
               variant="ghost"
-              size="icon"
-              className="ml-auto"
-              title="Remove selected user"
+              size="icon-sm"
               onClick={() => setSelectedUser("")}
+              className="text-red-500 hover:bg-red-50"
+              title="Clear selection"
             >
-              <XCircle className="w-5 h-5 text-red-500" />
+              <XCircle className="w-5 h-5" />
             </Button>
           </CardContent>
         </Card>
       ) : (
-        <Card className="border border-blue-100 bg-gradient-to-r from-blue-50/40 to-indigo-50/30 shadow-md rounded-xl">
+        <Card variant="elevated" className="border-2 border-blue-200 bg-gradient-to-r from-blue-50/50 to-indigo-50/50 shadow-medium">
           <CardHeader className="pb-4">
-            <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-              {/* Title & Description */}
+            <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
               <div className="space-y-1">
-                <CardTitle className="flex items-center gap-2 text-base lg:text-lg font-semibold text-blue-800">
-                  <div className="p-2 bg-blue-100 rounded-md">
-                    <Search className="w-4 h-4 text-blue-600" />
+                <CardTitle className="flex items-center gap-3 text-xl">
+                  <div className="p-2 bg-blue-100 rounded-xl">
+                    <Search className="w-5 h-5 text-blue-600" />
                   </div>
-                  {user?.role === "admin"
-                    ? "Select User to Review"
-                    : "Select Employee to Review"}
+                  {user?.role === "admin" ? "Select User to Review" : "Select Team Member"}
                 </CardTitle>
-                <CardDescription className="text-sm text-gray-600">
+                <CardDescription className="text-base">
                   {user?.role === "admin"
-                    ? "Search and choose a user to view their timesheets"
-                    : "Search and choose an employee to view timesheets"}
+                    ? "Choose a user to view their weekly timesheet submissions"
+                    : "Choose a team member to review their timesheet submissions"}
                 </CardDescription>
               </div>
-
-              {/* Users Count Badge */}
-              <Badge
-                variant="outline"
-                className="bg-white/70 border border-blue-200 text-blue-700 px-2.5 py-1.5 text-xs sm:text-sm flex items-center gap-1.5"
-              >
+              <Badge variant="outline" className="gap-2 bg-white/80 text-blue-700 border-blue-200 px-4 py-2">
                 <Users className="w-4 h-4" />
                 {users.length} {users.length === 1 ? "User" : "Users"}
               </Badge>
@@ -763,9 +762,8 @@ export function TimesheetManagement() {
           </CardHeader>
 
           <CardContent className="space-y-4">
-            {/* Select Field */}
-            <div className="space-y-1">
-              <label className="text-sm font-medium text-gray-700 flex items-center gap-1.5">
+            <div className="space-y-2">
+              <label className="text-sm font-semibold text-foreground flex items-center gap-2">
                 <UserIcon className="w-4 h-4" />
                 Choose Team Member
               </label>
@@ -788,18 +786,16 @@ export function TimesheetManagement() {
               />
             </div>
 
-            {/* Empty State */}
             {!selectedUser && (
-              <div className="text-center py-6">
-                <div className="w-12 h-12 bg-blue-100 rounded-xl flex items-center justify-center mx-auto mb-3">
-                  <Search className="w-5 h-5 text-blue-600" />
+              <div className="text-center py-8">
+                <div className="w-12 h-12 bg-blue-100 rounded-2xl flex items-center justify-center mx-auto mb-4">
+                  <Search className="w-6 h-6 text-blue-600" />
                 </div>
-                <h3 className="text-base font-semibold text-gray-900">
+                <h3 className="text-lg font-semibold text-foreground mb-2">
                   Select a Team Member
                 </h3>
-                <p className="text-sm text-gray-600 max-w-sm mx-auto">
-                  Use the search box above to find and select a team member to
-                  view their weekly timesheets.
+                <p className="text-muted-foreground max-w-sm mx-auto">
+                  Use the search box above to find and select a team member to view their weekly timesheets.
                 </p>
               </div>
             )}
@@ -810,31 +806,25 @@ export function TimesheetManagement() {
       {selectedUserData && (
         <>
           {/* Enhanced Week Navigation */}
-          <Card className="bg-gradient-to-r from-blue-50/50 to-indigo-50/50 border-blue-200/50 shadow-sm">
-            <CardContent className="p-4 lg:p-8">
-              <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-4 lg:gap-6">
-                {/* Left: Previous Week Button */}
-                <div className="flex justify-start">
-                  <Button
-                    variant="outline"
-                    onClick={() => navigateWeek("prev")}
-                    className="gap-2 bg-white/80 hover:bg-white border-blue-200 hover:border-blue-300 transition-all duration-200 shadow-sm text-sm lg:text-base"
-                    size="sm"
-                  >
-                    <ChevronLeft className="w-4 h-4" />
-                    <span className="hidden sm:inline">Previous Week</span>
-                    <span className="sm:hidden">Prev</span>
-                  </Button>
-                </div>
+          <Card variant="elevated" className="border-2 border-purple-200 bg-gradient-to-r from-purple-50/50 to-pink-50/50 shadow-medium">
+            <CardContent className="p-6">
+              <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-6">
+                <Button
+                  variant="outline"
+                  onClick={() => navigateWeek("prev")}
+                  leftIcon={<ChevronLeft className="w-4 h-4" />}
+                  className="bg-white/80 hover:bg-white border-purple-200 hover:border-purple-300 shadow-soft"
+                >
+                  Previous Week
+                </Button>
 
-                {/* Center: Week Info */}
-                <div className="text-center space-y-2 lg:space-y-3">
-                  <div className="flex items-center justify-center gap-2 lg:gap-3">
-                    <div className="p-1.5 lg:p-2 bg-blue-100 rounded-lg">
-                      <CalendarDays className="w-4 lg:w-6 h-4 lg:h-6 text-blue-600" />
+                <div className="text-center space-y-3">
+                  <div className="flex items-center justify-center gap-3">
+                    <div className="p-2 bg-purple-100 rounded-xl">
+                      <CalendarDays className="w-6 h-6 text-purple-600" />
                     </div>
                     <div>
-                      <h3 className="text-lg lg:text-xl font-bold text-gray-900">
+                      <h3 className="text-xl font-bold text-foreground">
                         {weekCalculations.start.toLocaleDateString("en-US", {
                           month: "short",
                           day: "numeric",
@@ -846,7 +836,7 @@ export function TimesheetManagement() {
                           year: "numeric",
                         })}
                       </h3>
-                      <p className="text-xs lg:text-sm text-gray-600 mt-1">
+                      <p className="text-sm text-muted-foreground">
                         Week of{" "}
                         {weekCalculations.start.toLocaleDateString("en-US", {
                           month: "long",
@@ -857,65 +847,53 @@ export function TimesheetManagement() {
                     </div>
                   </div>
 
-                  <div className="flex flex-col sm:flex-row items-center justify-center gap-2 lg:gap-3">
-                    {weekCalculations.isCurrentWeek && (
-                      <Badge className="bg-green-100 text-green-800 border-green-200 text-xs lg:text-sm">
-                        <div className="w-2 h-2 bg-green-500 rounded-full mr-1 animate-pulse"></div>
-                        Current Week
-                      </Badge>
-                    )}
-                  </div>
+                  {weekCalculations.isCurrentWeek && (
+                    <Badge className="bg-emerald-100 text-emerald-800 border-emerald-200 gap-1">
+                      <div className="w-2 h-2 bg-emerald-500 rounded-full animate-pulse"></div>
+                      Current Week
+                    </Badge>
+                  )}
                 </div>
 
-                {/* Right: Next Week Button & Today Button */}
-                <div className="flex justify-end gap-2">
+                <div className="flex gap-2">
                   {!weekCalculations.isCurrentWeek && (
                     <Button
                       variant="outline"
-                      size="sm"
                       onClick={goToCurrentWeek}
-                      className="gap-2 bg-white/80 hover:bg-white border-blue-200 hover:border-blue-300 shadow-sm text-xs lg:text-sm"
+                      leftIcon={<Calendar className="w-4 h-4" />}
+                      className="bg-white/80 hover:bg-white border-purple-200 hover:border-purple-300 shadow-soft"
                     >
-                      <Calendar className="w-4 h-4" />
-                      <span className="hidden sm:inline">Current Week</span>
-                      <span className="sm:hidden">Today</span>
+                      Current Week
                     </Button>
                   )}
                   <Button
                     variant="outline"
                     onClick={() => navigateWeek("next")}
                     disabled={!weekCalculations.canNavigateNext}
-                    className={`gap-2 transition-all duration-200 shadow-sm text-sm lg:text-base ${
+                    rightIcon={<ChevronRight className="w-4 h-4" />}
+                    className={cn(
+                      "shadow-soft",
                       weekCalculations.canNavigateNext
-                        ? "bg-white/80 hover:bg-white border-blue-200 hover:border-blue-300"
-                        : "opacity-50 cursor-not-allowed bg-gray-100 border-gray-200"
-                    }`}
-                    title={
-                      !weekCalculations.canNavigateNext
-                        ? "Cannot navigate to future weeks"
-                        : "Next week"
-                    }
-                    size="sm"
+                        ? "bg-white/80 hover:bg-white border-purple-200 hover:border-purple-300"
+                        : "opacity-50 cursor-not-allowed"
+                    )}
+                    title={!weekCalculations.canNavigateNext ? "Cannot navigate to future weeks" : "Next week"}
                   >
-                    <span className="hidden sm:inline">Next Week</span>
-                    <span className="sm:hidden">Next</span>
-                    <ChevronRight className="w-4 h-4" />
+                    Next Week
                   </Button>
                 </div>
               </div>
 
-              {/* Week Progress Indicator */}
-              <div className="mt-4 lg:mt-6 pt-4 lg:pt-6 border-t border-blue-200/50">
-                <div className="flex items-center justify-between text-xs lg:text-sm">
-                  <span className="text-gray-600">Week Progress</span>
-                  <span className="font-medium text-gray-900">
-                    {sessions.length} session{sessions.length !== 1 ? "s" : ""}{" "}
-                    recorded
+              <div className="mt-6 pt-6 border-t border-purple-200/50">
+                <div className="flex items-center justify-between text-sm">
+                  <span className="text-muted-foreground">Week Progress</span>
+                  <span className="font-semibold text-foreground">
+                    {sessions.length} session{sessions.length !== 1 ? "s" : ""} recorded
                   </span>
                 </div>
-                <div className="mt-2 w-full bg-blue-100 rounded-full h-2">
+                <div className="mt-2 w-full bg-purple-100 rounded-full h-2">
                   <div
-                    className="bg-gradient-to-r from-blue-500 to-blue-600 h-2 rounded-full transition-all duration-500"
+                    className="bg-gradient-to-r from-purple-500 to-pink-500 h-2 rounded-full transition-all duration-500"
                     style={{
                       width: `${Math.min((sessions.length / 7) * 100, 100)}%`,
                     }}
@@ -925,144 +903,78 @@ export function TimesheetManagement() {
             </CardContent>
           </Card>
 
-          {/* Compact Responsive Stats Cards */}
-          {/* <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-3 lg:gap-4">
-            <Card className="border-2 border-blue-200 bg-gradient-to-br from-blue-50 to-blue-100 shadow-sm">
-              <CardContent className="p-3">
-                <div className="flex items-center justify-between">
-                  <div className="space-y-1">
-                    <p className="text-xs lg:text-sm font-medium text-blue-700">
-                      Total Hours
-                    </p>
-                    <p className="text-lg lg:text-2xl font-bold text-blue-900">
-                      {formatDuration(stats.totalMinutes)}
-                    </p>
-                  </div>
-                  <div className="p-2 lg:p-3 bg-blue-200 rounded-xl">
-                    <Clock className="w-4 lg:w-6 h-4 lg:h-6 text-blue-700" />
-                  </div>
-                </div>
-              </CardContent>
-            </Card>
+          {/* Enhanced Stats Cards */}
+          <div className="grid grid-cols-2 lg:grid-cols-6 gap-4 lg:gap-6">
+            <StatCard
+              title="Total Hours"
+              value={formatDuration(stats.totalMinutes)}
+              icon={Clock}
+              color="blue"
+              subtitle="This week"
+            />
+            <StatCard
+              title="Pending"
+              value={stats.pending}
+              icon={AlertCircle}
+              color="yellow"
+              subtitle="Need review"
+            />
+            <StatCard
+              title="Approved"
+              value={stats.approved}
+              icon={CheckCircle}
+              color="green"
+              subtitle="Completed"
+            />
+            <StatCard
+              title="Rejected"
+              value={stats.disapproved}
+              icon={XCircle}
+              color="red"
+              subtitle="Need attention"
+            />
+            <StatCard
+              title="Productivity"
+              value={`${stats.productivityRate}%`}
+              icon={TrendingUp}
+              color="purple"
+              subtitle="Active time"
+            />
+            <StatCard
+              title="Avg Session"
+              value={formatDuration(stats.averageSessionLength)}
+              icon={Target}
+              color="orange"
+              subtitle="Per session"
+            />
+          </div>
 
-            <Card className="border-2 border-yellow-200 bg-gradient-to-br from-yellow-50 to-yellow-100 shadow-sm">
-              <CardContent className="p-3">
-                <div className="flex items-center justify-between">
-                  <div className="space-y-1">
-                    <p className="text-xs lg:text-sm font-medium text-yellow-700">
-                      Pending
-                    </p>
-                    <p className="text-lg lg:text-2xl font-bold text-yellow-900">
-                      {stats.pending}
-                    </p>
-                  </div>
-                  <div className="p-2 lg:p-3 bg-yellow-200 rounded-xl">
-                    <AlertCircle className="w-4 lg:w-6 h-4 lg:h-6 text-yellow-700" />
-                  </div>
-                </div>
-              </CardContent>
-            </Card>
-
-            <Card className="border-2 border-green-200 bg-gradient-to-br from-green-50 to-green-100 shadow-sm">
-              <CardContent className="p-3">
-                <div className="flex items-center justify-between">
-                  <div className="space-y-1">
-                    <p className="text-xs lg:text-sm font-medium text-green-700">
-                      Approved
-                    </p>
-                    <p className="text-lg lg:text-2xl font-bold text-green-900">
-                      {stats.approved}
-                    </p>
-                  </div>
-                  <div className="p-2 lg:p-3 bg-green-200 rounded-xl">
-                    <CheckCircle className="w-4 lg:w-6 h-4 lg:h-6 text-green-700" />
-                  </div>
-                </div>
-              </CardContent>
-            </Card>
-
-            <Card className="border-2 border-red-200 bg-gradient-to-br from-red-50 to-red-100 shadow-sm">
-              <CardContent className="p-3">
-                <div className="flex items-center justify-between">
-                  <div className="space-y-1">
-                    <p className="text-xs lg:text-sm font-medium text-red-700">
-                      Rejected
-                    </p>
-                    <p className="text-lg lg:text-2xl font-bold text-red-900">
-                      {stats.disapproved}
-                    </p>
-                  </div>
-                  <div className="p-2 lg:p-3 bg-red-200 rounded-xl">
-                    <XCircle className="w-4 lg:w-6 h-4 lg:h-6 text-red-700" />
-                  </div>
-                </div>
-              </CardContent>
-            </Card>
-
-            <Card className="border-2 border-purple-200 bg-gradient-to-br from-purple-50 to-purple-100 shadow-sm">
-              <CardContent className="p-3">
-                <div className="flex items-center justify-between">
-                  <div className="space-y-1">
-                    <p className="text-xs lg:text-sm font-medium text-purple-700">
-                      Productivity
-                    </p>
-                    <p className="text-lg lg:text-2xl font-bold text-purple-900">
-                      {stats.productivityRate}%
-                    </p>
-                  </div>
-                  <div className="p-2 lg:p-3 bg-purple-200 rounded-xl">
-                    <TrendingUp className="w-4 lg:w-6 h-4 lg:h-6 text-purple-700" />
-                  </div>
-                </div>
-              </CardContent>
-            </Card>
-
-            <Card className="border-2 border-orange-200 bg-gradient-to-br from-orange-50 to-orange-100 shadow-sm">
-              <CardContent className="p-3">
-                <div className="flex items-center justify-between">
-                  <div className="space-y-1">
-                    <p className="text-xs lg:text-sm font-medium text-orange-700">
-                      Idle Time
-                    </p>
-                    <p className="text-lg lg:text-2xl font-bold text-orange-900">
-                      {formatDuration(stats.idleMinutes)}
-                    </p>
-                  </div>
-                  <div className="p-2 lg:p-3 bg-orange-200 rounded-xl">
-                    <BarChart3 className="w-4 lg:w-6 h-4 lg:h-6 text-orange-700" />
-                  </div>
-                </div>
-              </CardContent>
-            </Card>
-          </div> */}
-
-          <Card className="border-2 border-gray-200 shadow-sm">
-            <CardHeader>
-              <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+          {/* Enhanced Sessions Table */}
+          <Card variant="elevated" className="border-2 shadow-strong">
+            <CardHeader divided>
+              <div className="flex items-center justify-between">
                 <div className="space-y-1">
-                  <CardTitle className="flex items-center gap-2 text-lg lg:text-xl">
-                    <Calendar className="w-4 lg:w-5 h-4 lg:h-5 text-blue-600" />
-                    Sessions - {selectedUserData.fullName}
+                  <CardTitle className="flex items-center gap-3 text-xl">
+                    <div className="p-2 bg-gradient-to-br from-amber-100 to-orange-100 rounded-xl">
+                      <FileText className="w-5 h-5 text-amber-600" />
+                    </div>
+                    Weekly Sessions - {selectedUserData.fullName}
                   </CardTitle>
-                  <CardDescription className="text-sm lg:text-base text-gray-600">
-                    Weekly timesheet overview with session details
+                  <CardDescription className="text-base">
+                    Detailed timesheet overview with session management
                   </CardDescription>
                 </div>
-                <div className="flex items-center gap-2">
-                  <Badge
-                    variant="outline"
-                    className="gap-1 bg-blue-50 text-blue-700 border-blue-200 text-xs lg:text-sm"
-                  >
+                <div className="flex items-center gap-3">
+                  <Badge variant="outline" className="gap-2 bg-amber-50 text-amber-700 border-amber-200">
                     <Activity className="w-3 h-3" />
                     {sessions.length} sessions
                   </Badge>
                   <Button
                     variant="outline"
                     size="sm"
-                    className="gap-2 text-xs lg:text-sm"
+                    leftIcon={<Download className="w-4 h-4" />}
                   >
-                    <Download className="w-4 h-4" />
-                    <span className="hidden sm:inline">Export</span>
+                    Export
                   </Button>
                 </div>
               </div>
@@ -1073,6 +985,7 @@ export function TimesheetManagement() {
                 columns={tableColumns}
                 onRowClick={handleViewSession}
                 emptyMessage="No sessions found for this week"
+                className="hover:shadow-soft transition-shadow"
               />
             </CardContent>
           </Card>

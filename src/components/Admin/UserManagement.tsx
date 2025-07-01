@@ -4,19 +4,9 @@ import { db } from "../../lib/firebase";
 import { User } from "../../types";
 import { Button } from "../ui/Button";
 import { Badge } from "../ui/Badge";
-import {
-  Card,
-  CardContent,
-  CardDescription,
-  CardHeader,
-  CardTitle,
-} from "../ui/Card";
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "../ui/Card";
 import { Avatar, AvatarFallback, AvatarImage } from "../ui/Avatar";
-import {
-  DataTable,
-  createSortableHeader,
-  createActionCell,
-} from "../ui/DataTable";
+import { DataTable, createSortableHeader, createActionCell } from "../ui/DataTable";
 import { Input } from "../ui/Input";
 import {
   Users,
@@ -31,6 +21,17 @@ import {
   Search,
   X,
   Filter,
+  Plus,
+  Download,
+  RefreshCw,
+  MoreHorizontal,
+  Edit,
+  UserPlus,
+  Zap,
+  TrendingUp,
+  Activity,
+  CheckCircle,
+  AlertCircle,
 } from "lucide-react";
 import { ColumnDef } from "@tanstack/react-table";
 import toast from "react-hot-toast";
@@ -41,6 +42,7 @@ import StatCard from "../Common/StatCard";
 export function UserManagement() {
   const [users, setUsers] = useState<User[]>([]);
   const [loading, setLoading] = useState(true);
+  const [refreshing, setRefreshing] = useState(false);
   const [showEditModal, setShowEditModal] = useState(false);
   const [selectedUser, setSelectedUser] = useState<User | null>(null);
   const [searchTerm, setSearchTerm] = useState("");
@@ -55,6 +57,7 @@ export function UserManagement() {
     const employeeCount = users.filter((u) => u.role === "employee").length;
 
     return {
+      totalUsers: users.length,
       activeUsers,
       revokedUsers,
       adminCount,
@@ -91,6 +94,7 @@ export function UserManagement() {
 
   const fetchUsers = useCallback(async () => {
     try {
+      setRefreshing(true);
       const usersQuery = query(collection(db, "users"));
       const querySnapshot = await getDocs(usersQuery);
       const usersData = querySnapshot.docs.map((doc) => ({
@@ -113,11 +117,12 @@ export function UserManagement() {
       })) as User[];
 
       setUsers(usersData);
-      setLoading(false);
     } catch (error) {
       console.error("Error fetching users:", error);
       toast.error("Failed to load users");
+    } finally {
       setLoading(false);
+      setRefreshing(false);
     }
   }, []);
 
@@ -195,7 +200,7 @@ export function UserManagement() {
 
   const hasActiveFilters = searchTerm || selectedRoles.length > 0;
 
-  // Define table columns (without checkboxes)
+  // Define table columns
   const columns: ColumnDef<User>[] = useMemo(
     () => [
       {
@@ -205,15 +210,15 @@ export function UserManagement() {
           const user = row.original;
           return (
             <div className="flex items-center space-x-3">
-              <Avatar className="h-10 w-10 border-2 border-background shadow-sm">
+              <Avatar className="h-10 w-10 border-2 border-background shadow-soft">
                 <AvatarImage src={user.photoURL} alt={user.fullName} />
-                <AvatarFallback className="text-sm font-medium">
+                <AvatarFallback className="bg-gradient-to-br from-blue-500 to-purple-600 text-white font-semibold">
                   {user.fullName?.slice(0, 2).toUpperCase() ||
                     user.email?.slice(0, 2).toUpperCase()}
                 </AvatarFallback>
               </Avatar>
-              <div className="min-w-0">
-                <p className="font-medium truncate">{user.fullName}</p>
+              <div className="min-w-0 flex-1">
+                <p className="font-semibold text-foreground truncate">{user.fullName}</p>
                 <p className="text-sm text-muted-foreground truncate">
                   {user.email}
                 </p>
@@ -230,10 +235,10 @@ export function UserManagement() {
           return (
             <Badge
               variant={getRoleBadgeVariant(role)}
-              className="flex items-center gap-1 w-fit"
+              className="flex items-center gap-1.5 w-fit"
             >
               {getRoleIcon(role)}
-              <span className="capitalize">{role}</span>
+              <span className="capitalize font-medium">{role}</span>
             </Badge>
           );
         },
@@ -248,9 +253,17 @@ export function UserManagement() {
           const managerId = row.getValue("managerId") as string;
           const manager = users.find((u) => u.id === managerId);
           return manager ? (
-            <span className="text-sm">{manager.fullName}</span>
+            <div className="flex items-center gap-2">
+              <Avatar className="h-6 w-6">
+                <AvatarImage src={manager.photoURL} alt={manager.fullName} />
+                <AvatarFallback className="text-xs bg-accent">
+                  {manager.fullName?.slice(0, 2).toUpperCase()}
+                </AvatarFallback>
+              </Avatar>
+              <span className="text-sm font-medium">{manager.fullName}</span>
+            </div>
           ) : (
-            <span className="text-sm text-muted-foreground">None</span>
+            <span className="text-sm text-muted-foreground">None assigned</span>
           );
         },
       },
@@ -264,10 +277,18 @@ export function UserManagement() {
               <div
                 className={cn(
                   "w-2 h-2 rounded-full",
-                  isActive !== false ? "bg-green-500" : "bg-red-500"
+                  isActive !== false ? "bg-emerald-500 shadow-glow" : "bg-red-500"
                 )}
               />
-              <Badge variant={isActive !== false ? "default" : "destructive"}>
+              <Badge 
+                variant={isActive !== false ? "success" : "destructive"}
+                size="sm"
+              >
+                {isActive !== false ? (
+                  <CheckCircle className="w-3 h-3 mr-1" />
+                ) : (
+                  <AlertCircle className="w-3 h-3 mr-1" />
+                )}
                 {isActive !== false ? "Active" : "Revoked"}
               </Badge>
             </div>
@@ -282,15 +303,22 @@ export function UserManagement() {
       },
       {
         accessorKey: "createdAt",
-        header: createSortableHeader("Created"),
+        header: createSortableHeader("Joined"),
         cell: ({ row }) => {
           const createdAt = row.getValue("createdAt") as Date;
           return (
-            <span className="text-sm">
-              {createdAt instanceof Date
-                ? createdAt.toLocaleDateString()
-                : new Date(createdAt).toLocaleDateString()}
-            </span>
+            <div className="text-sm">
+              <div className="font-medium text-foreground">
+                {createdAt instanceof Date
+                  ? createdAt.toLocaleDateString()
+                  : new Date(createdAt).toLocaleDateString()}
+              </div>
+              <div className="text-muted-foreground">
+                {createdAt instanceof Date
+                  ? createdAt.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
+                  : new Date(createdAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+              </div>
+            </div>
           );
         },
       },
@@ -300,15 +328,35 @@ export function UserManagement() {
         cell: ({ row }) => {
           const user = row.original as User;
           return (
-            <Button
-              variant="outline"
-              size="sm"
-              onClick={() => handleEditUser(user)}
-              className="text-xs"
-            >
-              <Settings className="w-4 h-4 mr-1" />
-              View
-            </Button>
+            <div className="flex items-center gap-2">
+              <Button
+                variant="ghost"
+                size="icon-sm"
+                onClick={() => handleEditUser(user)}
+                className="hover:bg-blue-50 hover:text-blue-600"
+                title="Edit user"
+              >
+                <Edit className="w-4 h-4" />
+              </Button>
+              <Button
+                variant="ghost"
+                size="icon-sm"
+                onClick={() => quickToggleAccess(user)}
+                className={cn(
+                  "hover:shadow-soft",
+                  user.isActive 
+                    ? "hover:bg-red-50 hover:text-red-600" 
+                    : "hover:bg-green-50 hover:text-green-600"
+                )}
+                title={user.isActive ? "Revoke access" : "Grant access"}
+              >
+                {user.isActive ? (
+                  <ShieldOff className="w-4 h-4" />
+                ) : (
+                  <Shield className="w-4 h-4" />
+                )}
+              </Button>
+            </div>
           );
         },
         enableSorting: false,
@@ -321,161 +369,212 @@ export function UserManagement() {
   if (loading) {
     return (
       <div className="flex items-center justify-center h-64">
-        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div>
+        <div className="text-center space-y-4">
+          <div className="w-12 h-12 border-4 border-primary/20 border-t-primary rounded-full animate-spin mx-auto"></div>
+          <p className="text-sm text-muted-foreground">Loading team members...</p>
+        </div>
       </div>
     );
   }
 
   return (
-    <div className="space-y-8">
+    <div className="space-y-8 animate-fade-in">
       {/* Header */}
-      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
-        <div>
-          <h1 className="text-3xl font-semibold tracking-tight">
-            User Management
+      <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-4">
+        <div className="space-y-1">
+          <h1 className="text-3xl font-bold tracking-tight text-foreground flex items-center gap-3">
+            <div className="p-2 bg-gradient-to-br from-blue-500 to-purple-600 rounded-2xl text-white shadow-medium">
+              <Users className="w-6 h-6" />
+            </div>
+            Team Management
           </h1>
-          <p className="text-muted-foreground">
+          <p className="text-muted-foreground text-lg">
             Manage team members, roles, and access permissions
           </p>
         </div>
+        
+        <div className="flex items-center gap-3">
+          <Button
+            variant="outline"
+            onClick={fetchUsers}
+            disabled={refreshing}
+            leftIcon={<RefreshCw className={cn("w-4 h-4", refreshing && "animate-spin")} />}
+          >
+            Refresh
+          </Button>
+          <Button
+            variant="outline"
+            leftIcon={<Download className="w-4 h-4" />}
+          >
+            Export
+          </Button>
+          <Button
+            leftIcon={<UserPlus className="w-4 h-4" />}
+            className="shadow-medium hover:shadow-strong"
+          >
+            Add User
+          </Button>
+        </div>
       </div>
 
-      {/* Enhanced Stats Cards */}
-      <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-4 sm:gap-6">
+      {/* Enhanced Stats Grid */}
+      <div className="grid grid-cols-2 lg:grid-cols-6 gap-4 lg:gap-6">
         <StatCard
           title="Total Users"
-          value={users.length}
+          value={stats.totalUsers}
           icon={Users}
           color="blue"
-        />
-        <StatCard
-          title="Managers"
-          value={stats.managerCount}
-          icon={UserCheck}
-          color="purple"
-        />
-        <StatCard
-          title="Employees"
-          value={stats.employeeCount}
-          icon={Timer}
-          color="orange"
+          className="lg:col-span-1"
         />
         <StatCard
           title="Active"
           value={stats.activeUsers}
-          icon={Shield}
+          icon={CheckCircle}
           color="green"
+          subtitle={`${Math.round((stats.activeUsers / stats.totalUsers) * 100)}% of total`}
         />
         <StatCard
           title="Revoked"
           value={stats.revokedUsers}
           icon={ShieldOff}
           color="red"
+          subtitle={stats.revokedUsers > 0 ? "Need attention" : "All active"}
+        />
+        <StatCard
+          title="Admins"
+          value={stats.adminCount}
+          icon={Crown}
+          color="purple"
+          subtitle="Full access"
+        />
+        <StatCard
+          title="Managers"
+          value={stats.managerCount}
+          icon={UserCheck}
+          color="orange"
+          subtitle="Team leads"
+        />
+        <StatCard
+          title="Employees"
+          value={stats.employeeCount}
+          icon={Timer}
+          color="gray"
+          subtitle="Team members"
         />
       </div>
 
-      {/* Search and Filters */}
-      <Card className="border-2">
-        <CardContent className="p-6">
-          <div className="space-y-4">
-            {/* Search and Role Filters Row */}
-            <div className="flex flex-col sm:flex-row gap-4">
-              {/* <div className="relative flex-1 max-w-sm">
-                <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-                <Input
-                  placeholder="Search users by name, email, or role..."
-                  value={searchTerm}
-                  onChange={(e) => setSearchTerm(e.target.value)}
-                  className="pl-10 pr-10"
-                />
-                {searchTerm && (
-                  <Button
-                    variant="ghost"
-                    size="icon"
-                    onClick={() => setSearchTerm("")}
-                    className="absolute right-1 top-1/2 transform -translate-y-1/2 h-7 w-7"
-                  >
-                    <X className="h-4 w-4" />
-                  </Button>
-                )}
-              </div> */}
-
-              {/* Role Filter Buttons */}
-              <div className="flex items-center gap-2">
-                <span className="text-sm font-medium text-gray-600">
-                  Filter by role:
-                </span>
-                <Button
-                  variant={
-                    selectedRoles.includes("admin") ? "default" : "outline"
-                  }
-                  size="sm"
-                  onClick={() => toggleRoleFilter("admin")}
-                  className="gap-2"
-                >
-                  <Crown className="w-3 h-3" />
-                  Admin
-                  {stats.adminCount > 0 && (
-                    <Badge variant="secondary" className="ml-1 text-xs">
-                      {stats.adminCount}
-                    </Badge>
-                  )}
-                </Button>
-
-                <Button
-                  variant={
-                    selectedRoles.includes("manager") ? "default" : "outline"
-                  }
-                  size="sm"
-                  onClick={() => toggleRoleFilter("manager")}
-                  className="gap-2"
-                >
-                  <UserCheck className="w-3 h-3" />
-                  Manager
-                  {stats.managerCount > 0 && (
-                    <Badge variant="secondary" className="ml-1 text-xs">
-                      {stats.managerCount}
-                    </Badge>
-                  )}
-                </Button>
-
-                <Button
-                  variant={
-                    selectedRoles.includes("employee") ? "default" : "outline"
-                  }
-                  size="sm"
-                  onClick={() => toggleRoleFilter("employee")}
-                  className="gap-2"
-                >
-                  <Timer className="w-3 h-3" />
-                  Employee
-                  {stats.employeeCount > 0 && (
-                    <Badge variant="secondary" className="ml-1 text-xs">
-                      {stats.employeeCount}
-                    </Badge>
-                  )}
-                </Button>
-
-                {/* Clear Filters */}
-                {hasActiveFilters && (
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    onClick={clearFilters}
-                    className="gap-2 text-red-600 border-red-300 hover:bg-red-50"
-                  >
-                    <X className="w-3 h-3" />
-                    Clear
-                  </Button>
-                )}
-              </div>
+      {/* Enhanced Filters Card */}
+      <Card variant="elevated" className="border-2 border-blue-100 bg-gradient-to-r from-blue-50/50 to-indigo-50/50">
+        <CardHeader className="pb-4">
+          <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+            <div className="space-y-1">
+              <CardTitle className="flex items-center gap-3 text-xl">
+                <div className="p-2 bg-blue-100 rounded-xl">
+                  <Filter className="w-5 h-5 text-blue-600" />
+                </div>
+                Search & Filter
+              </CardTitle>
+              <CardDescription className="text-base">
+                Find and filter team members by role, status, or search terms
+              </CardDescription>
             </div>
+            <Badge variant="outline" className="gap-2 bg-white/80 text-blue-700 border-blue-200 px-4 py-2">
+              <Activity className="w-4 h-4" />
+              {filteredUsers.length} of {users.length} users
+            </Badge>
+          </div>
+        </CardHeader>
+        <CardContent className="space-y-6">
+          {/* Search Bar */}
+          <div className="relative max-w-md">
+            <Input
+              placeholder="Search by name, email, or role..."
+              value={searchTerm}
+              onChange={(e) => setSearchTerm(e.target.value)}
+              leftIcon={<Search className="w-4 h-4" />}
+              rightIcon={searchTerm && (
+                <Button
+                  variant="ghost"
+                  size="icon-sm"
+                  onClick={() => setSearchTerm("")}
+                  className="h-6 w-6"
+                >
+                  <X className="h-3 w-3" />
+                </Button>
+              )}
+              className="pr-10"
+            />
+          </div>
 
-            {/* Active Filters Display */}
-            {hasActiveFilters && (
-              <div className="flex items-center gap-2 p-3 bg-muted/50 rounded-lg">
-                <Filter className="h-4 w-4 text-muted-foreground" />
-                <span className="text-sm font-medium">Active filters:</span>
+          {/* Role Filter Buttons */}
+          <div className="flex flex-wrap items-center gap-3">
+            <span className="text-sm font-medium text-foreground">Filter by role:</span>
+            <div className="flex flex-wrap gap-2">
+              <Button
+                variant={selectedRoles.includes("admin") ? "default" : "outline"}
+                size="sm"
+                onClick={() => toggleRoleFilter("admin")}
+                leftIcon={<Crown className="w-3 h-3" />}
+                className="gap-2"
+              >
+                Admin
+                {stats.adminCount > 0 && (
+                  <Badge variant="secondary" size="sm" className="ml-1">
+                    {stats.adminCount}
+                  </Badge>
+                )}
+              </Button>
+
+              <Button
+                variant={selectedRoles.includes("manager") ? "default" : "outline"}
+                size="sm"
+                onClick={() => toggleRoleFilter("manager")}
+                leftIcon={<UserCheck className="w-3 h-3" />}
+                className="gap-2"
+              >
+                Manager
+                {stats.managerCount > 0 && (
+                  <Badge variant="secondary" size="sm" className="ml-1">
+                    {stats.managerCount}
+                  </Badge>
+                )}
+              </Button>
+
+              <Button
+                variant={selectedRoles.includes("employee") ? "default" : "outline"}
+                size="sm"
+                onClick={() => toggleRoleFilter("employee")}
+                leftIcon={<Timer className="w-3 h-3" />}
+                className="gap-2"
+              >
+                Employee
+                {stats.employeeCount > 0 && (
+                  <Badge variant="secondary" size="sm" className="ml-1">
+                    {stats.employeeCount}
+                  </Badge>
+                )}
+              </Button>
+
+              {hasActiveFilters && (
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={clearFilters}
+                  leftIcon={<X className="w-3 h-3" />}
+                  className="text-red-600 border-red-300 hover:bg-red-50"
+                >
+                  Clear All
+                </Button>
+              )}
+            </div>
+          </div>
+
+          {/* Active Filters Display */}
+          {hasActiveFilters && (
+            <div className="flex items-center gap-2 p-4 bg-white/60 rounded-xl border border-blue-200/50">
+              <Zap className="h-4 w-4 text-blue-600" />
+              <span className="text-sm font-medium text-blue-900">Active filters:</span>
+              <div className="flex flex-wrap gap-2">
                 {searchTerm && (
                   <Badge variant="secondary" className="gap-1">
                     Search: "{searchTerm}"
@@ -503,32 +602,40 @@ export function UserManagement() {
                     </Button>
                   </Badge>
                 ))}
-                <div className="ml-auto text-sm text-muted-foreground">
-                  {filteredUsers.length} of {users.length} user(s)
-                </div>
               </div>
-            )}
-          </div>
+            </div>
+          )}
         </CardContent>
       </Card>
 
       {/* Enhanced Data Table */}
-      <Card className="border-2">
-        <CardHeader>
-          <CardTitle className="flex items-center gap-2">
-            <Users className="w-5 h-5 text-primary" />
-            Team Members
-          </CardTitle>
-          <CardDescription>
-            Comprehensive user management with advanced filtering and role-based
-            actions
-          </CardDescription>
+      <Card variant="elevated" className="border-2 shadow-strong">
+        <CardHeader divided>
+          <div className="flex items-center justify-between">
+            <div className="space-y-1">
+              <CardTitle className="flex items-center gap-3 text-xl">
+                <div className="p-2 bg-gradient-to-br from-emerald-100 to-blue-100 rounded-xl">
+                  <Users className="w-5 h-5 text-emerald-600" />
+                </div>
+                Team Directory
+              </CardTitle>
+              <CardDescription className="text-base">
+                Comprehensive user management with advanced filtering and role-based actions
+              </CardDescription>
+            </div>
+            <div className="flex items-center gap-2">
+              <Badge variant="outline" className="gap-2 bg-emerald-50 text-emerald-700 border-emerald-200">
+                <TrendingUp className="w-3 h-3" />
+                {filteredUsers.length} members
+              </Badge>
+            </div>
+          </div>
         </CardHeader>
         <CardContent>
           <DataTable
             columns={columns}
             data={filteredUsers}
-            searchPlaceholder="Search users..."
+            searchPlaceholder="Search team members..."
             className="border-0"
           />
         </CardContent>
