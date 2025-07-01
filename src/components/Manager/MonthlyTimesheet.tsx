@@ -482,18 +482,16 @@ export function MonthlyTimesheet() {
     <div className="space-y-6">
       {/* Header */}
       <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-        {/* Title & Subtitle */}
         <div>
-          <h1 className="text-xl sm:text-2xl font-semibold text-gray-900 leading-tight">
+          <h1 className="text-2xl font-semibold tracking-tight text-gray-900">
             Monthly Timesheet
           </h1>
-          <p className="text-sm text-gray-600">
-            Track and manage monthly work hours
+          <p className="text-sm text-muted-foreground">
+            Track and manage team members' monthly hours
           </p>
         </div>
 
-        {/* Action Buttons */}
-        <div className="flex flex-wrap items-center gap-2 sm:gap-3">
+        <div className="flex flex-wrap gap-2 sm:gap-3">
           <Button
             variant="outline"
             size="sm"
@@ -501,128 +499,137 @@ export function MonthlyTimesheet() {
               selectedUser && fetchMonthlyUserSessions(selectedUser)
             }
             disabled={refreshing || !selectedUser}
-            className="flex items-center gap-1.5"
+            className="gap-1.5"
           >
             <RefreshCw
               className={cn("w-4 h-4", refreshing && "animate-spin")}
             />
-            <span>Refresh</span>
+            Refresh
           </Button>
-
           <Button
             variant="outline"
             size="sm"
-            className="flex items-center gap-1.5"
             disabled={!selectedUser}
+            className="gap-1.5"
           >
             <Download className="w-4 h-4" />
-            <span>Export</span>
+            Export
           </Button>
         </div>
       </div>
 
       {/* Enhanced User Selection Card */}
-      <Card variant="elevated" className="border-2 border-blue-200 bg-gradient-to-r from-blue-50/50 to-indigo-50/50 shadow-medium">
+      <Card className="border-2 border-blue-200 bg-gradient-to-r from-blue-50/50 to-indigo-50/50 shadow-lg">
         <CardHeader className="pb-4">
-          <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+          <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
             <div className="space-y-1">
-              <CardTitle className="flex items-center gap-3 text-xl">
-                <div className="p-2 bg-blue-100 rounded-xl">
+              <CardTitle className="flex items-center gap-3 text-xl font-semibold">
+                <div className="p-2 bg-blue-100 rounded-lg">
                   <Search className="w-5 h-5 text-blue-600" />
                 </div>
                 Select Team Member
               </CardTitle>
-              <p className="text-gray-600">
-                Search and choose a team member to view their monthly timesheet
+              <p className="text-sm text-muted-foreground">
+                Choose a team member to view their timesheet
               </p>
             </div>
-            <div className="flex items-center gap-2">
-              <span className="text-sm text-gray-600">Available:</span>
-              <span className="font-semibold text-blue-600">
+            <div className="flex items-center gap-1 text-sm">
+              <span className="text-muted-foreground">Available:</span>
+              <span className="font-medium text-blue-700">
                 {users.length} users
               </span>
             </div>
           </div>
         </CardHeader>
         <CardContent className="space-y-6">
-          {/* Enhanced User Selection with React Select */}
-          <div className="space-y-3">
-            <label className="text-sm font-semibold text-gray-700 flex items-center gap-2">
-              <UserIcon className="w-4 h-4" />
-              Choose Team Member
-            </label>
-            <Select
-              value={selectedUserOption}
-              onChange={(option) => setSelectedUser(option?.value || "")}
-              options={userOptions}
-              components={{
-                Option: CustomOption,
-                SingleValue: CustomSingleValue,
-              }}
-              styles={customStyles}
-              placeholder="Search by name, email, or role..."
-              isSearchable
-              isClearable
-              className="react-select-container"
-              classNamePrefix="react-select"
-              noOptionsMessage={() => "No users found"}
-              loadingMessage={() => "Loading users..."}
-            />
-          </div>
-
-          {/* Month Navigation */}
-          <div className="flex items-center justify-between">
-            <Button
-              variant="outline"
-              onClick={() => navigateMonth("prev")}
-              className="gap-2"
-              leftIcon={<ChevronLeft className="w-4 h-4" />}
-            >
-              Previous Month
-            </Button>
-
-            <div className="text-center">
-              <h3 className="text-lg font-semibold">
-                {currentMonth.toLocaleDateString("en-US", {
-                  month: "long",
-                  year: "numeric",
-                })}
-              </h3>
-              {!isCurrentMonth && (
-                <Button
-                  variant="ghost"
-                  size="sm"
-                  onClick={goToCurrentMonth}
-                  className="text-blue-600 hover:text-blue-700"
-                >
-                  Go to Current Month
-                </Button>
-              )}
+          {/* User Selector + Month Navigation Row */}
+          <div className="flex flex-col-reverse gap-6 md:flex-row md:items-end md:justify-between">
+            {/* User Select Dropdown */}
+            <div className="w-full md:w-1/2 space-y-1.5">
+              <label className="text-sm font-medium text-gray-700 flex items-center gap-2">
+                <UserIcon className="w-4 h-4 text-gray-500" />
+                Choose Team Member
+              </label>
+              <Select
+                value={selectedUserOption}
+                onChange={(option) => setSelectedUser(option?.value || "")}
+                options={userOptions}
+                components={{
+                  Option: CustomOption,
+                  SingleValue: CustomSingleValue,
+                }}
+                styles={customStyles}
+                placeholder="Search by name, email, or role..."
+                isSearchable
+                isClearable
+                className="react-select-container"
+                classNamePrefix="react-select"
+                noOptionsMessage={() => "No users found"}
+                loadingMessage={() => "Loading users..."}
+              />
             </div>
 
-            <Button
-              variant="outline"
-              onClick={() => navigateMonth("next")}
-              disabled={!canNavigateNext}
-              className="gap-2"
-              rightIcon={<ChevronRight className="w-4 h-4" />}
-            >
-              Next Month
-            </Button>
+            {/* Month Navigation */}
+            <div className="flex items-center gap-2 md:gap-3">
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={() => navigateMonth("prev")}
+                className="flex items-center gap-1"
+              >
+                <ChevronLeft className="w-4 h-4" />
+                <span className="hidden sm:inline">Previous Month</span>
+              </Button>
+
+              <div className="text-center">
+                <h3 className="text-base font-semibold text-gray-900">
+                  {currentMonth.toLocaleDateString("en-US", {
+                    month: "long",
+                    year: "numeric",
+                  })}
+                </h3>
+                {!isCurrentMonth && (
+                  <Button
+                    variant="link"
+                    size="sm"
+                    onClick={goToCurrentMonth}
+                    className="text-blue-600 hover:text-blue-700 px-0"
+                  >
+                    Current Month (
+                    {new Date().toLocaleDateString("en-US", {
+                      month: "long",
+                      year: "numeric",
+                    })}
+                    )
+                  </Button>
+                )}
+              </div>
+
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={() => navigateMonth("next")}
+                disabled={!canNavigateNext}
+                className="flex items-center gap-1"
+              >
+                <span className="hidden sm:inline">Next Month</span>
+                <ChevronRight className="w-4 h-4" />
+              </Button>
+            </div>
           </div>
 
           {/* Empty State */}
           {!selectedUser && (
-            <div className="text-center py-8">
-              <div className="w-16 h-16 bg-blue-100 rounded-2xl flex items-center justify-center mx-auto mb-4">
-                <Search className="w-8 h-8 text-blue-600" />
+            <div className="py-10 text-center border border-dashed rounded-lg bg-muted/10">
+              <div className="w-14 h-14 mx-auto flex items-center justify-center rounded-full bg-blue-100 mb-4">
+                <Search className="w-6 h-6 text-blue-600" />
               </div>
-              <h3 className="text-lg font-semibold text-gray-900 mb-2">
-                Select a Team Member
+              <h3 className="text-lg font-semibold text-gray-900 mb-1">
+                No Team Member Selected
               </h3>
-              <p className="text-gray-600 max-w-md mx-auto">
-                Use the search dropdown above to find and select a team member
-                to view their monthly timesheet.
+              <p className="text-sm text-muted-foreground max-w-md mx-auto">
+                Use the dropdown above to search and select a team member to
+                view their monthly timesheet.
               </p>
             </div>
           )}
@@ -633,14 +640,14 @@ export function MonthlyTimesheet() {
       {selectedUser && (
         <>
           {/* Calendar */}
-          <Card variant="elevated" className="shadow-medium">
+          <Card className="bg-white border border-gray-200 shadow-sm rounded-xl">
             <CardContent className="p-6">
               {/* Calendar Header */}
               <div className="grid grid-cols-7 gap-1 mb-4 text-center">
                 {weekDays.map((day) => (
                   <div
                     key={day}
-                    className="text-sm font-semibold text-muted-foreground py-2"
+                    className="text-sm font-semibold text-muted-foreground"
                   >
                     {day}
                   </div>
@@ -648,28 +655,24 @@ export function MonthlyTimesheet() {
               </div>
 
               {/* Calendar Grid */}
-              <div className="grid grid-cols-7 gap-1">
+              <div className="grid grid-cols-7 gap-1 text-sm">
                 {calendarData.map((day, index) => (
                   <div
                     key={index}
                     className={cn(
-                      "rounded-xl border p-3 h-[110px] flex flex-col justify-between transition-all duration-200 group",
-                      "hover:shadow-soft hover:ring-1 hover:ring-gray-200",
-                      !day.isCurrentMonth &&
-                        "bg-muted/20 text-muted-foreground",
+                      "flex flex-col justify-between p-3 rounded-md border transition-all group",
+                      "hover:shadow-sm hover:ring-1 hover:ring-gray-200",
                       day.isToday &&
-                        "border-blue-500 bg-blue-50/50 ring-2 ring-blue-400 shadow-soft"
+                        "border-blue-500 bg-blue-50 ring-2 ring-blue-400",
+                      !day.isCurrentMonth && "bg-gray-50 text-muted-foreground"
                     )}
                   >
-                    {/* Date Header */}
                     <div className="flex items-center justify-between">
                       <span
                         className={cn(
                           "text-sm font-medium",
-                          day.isToday
-                            ? "text-blue-600 font-bold"
-                            : "text-gray-700",
-                          !day.isCurrentMonth && "text-gray-400"
+                          day.isToday ? "text-blue-600 font-semibold" : "",
+                          !day.isCurrentMonth ? "text-gray-400" : ""
                         )}
                       >
                         {day.date}
@@ -681,17 +684,19 @@ export function MonthlyTimesheet() {
                       )}
                     </div>
 
-                    {/* Time Entry Tag */}
-                    {day.totalMinutes > 0 && (
+                    {day.totalMinutes > 0 ? (
                       <div
                         className={cn(
-                          "text-[11px] font-semibold mt-auto w-fit px-2 py-0.5 rounded-lg",
+                          "text-[11px] font-medium mt-auto w-fit px-2 py-0.5 rounded-md",
                           getTimeBgColor(day.totalMinutes),
-                          getTimeColor(day.totalMinutes),
-                          "transition-colors duration-150 shadow-soft"
+                          getTimeColor(day.totalMinutes)
                         )}
                       >
                         {formatDuration(day.totalMinutes)}
+                      </div>
+                    ) : (
+                      <div className="text-[11px] text-gray-400 mt-auto">
+                        No Data
                       </div>
                     )}
                   </div>
@@ -702,45 +707,39 @@ export function MonthlyTimesheet() {
 
           {/* Selected User Info */}
           {selectedUserData && (
-            <Card variant="elevated" className="bg-gradient-to-r from-blue-50 to-indigo-50 border-2 border-blue-200 shadow-medium">
-              <CardContent className="p-6">
-                <div className="flex items-center justify-between">
-                  <div className="flex items-center gap-4">
-                    <Avatar className="h-12 w-12 border-2 border-white shadow-soft">
-                      <AvatarImage
-                        src={selectedUserData.photoURL}
-                        alt={selectedUserData.fullName}
-                      />
-                      <AvatarFallback className="text-lg font-semibold bg-gradient-to-br from-blue-500 to-purple-600 text-white">
-                        {selectedUserData.fullName?.slice(0, 2).toUpperCase() ||
-                          selectedUserData.email?.slice(0, 2).toUpperCase()}
-                      </AvatarFallback>
-                    </Avatar>
-                    <div>
-                      <h3 className="text-lg font-semibold text-gray-900">
-                        {selectedUserData.fullName}
-                      </h3>
-                      <p className="text-gray-600">{selectedUserData.email}</p>
-                      <div className="flex items-center gap-2 mt-1">
-                        {getRoleIcon(selectedUserData.role)}
-                        <span className="text-sm text-gray-600 capitalize">
-                          {selectedUserData.role}
-                        </span>
-                      </div>
+            <Card className="bg-white border border-gray-200 shadow-sm rounded-xl">
+              <CardContent className="p-6 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+                <div className="flex items-center gap-4">
+                  <Avatar className="h-12 w-12 border shadow">
+                    <AvatarImage src={selectedUserData.photoURL} />
+                    <AvatarFallback className="bg-gradient-to-r from-blue-500 to-purple-600 text-white text-lg font-semibold">
+                      {selectedUserData.fullName?.slice(0, 2).toUpperCase()}
+                    </AvatarFallback>
+                  </Avatar>
+                  <div>
+                    <h3 className="text-lg font-semibold">
+                      {selectedUserData.fullName}
+                    </h3>
+                    <p className="text-sm text-muted-foreground">
+                      {selectedUserData.email}
+                    </p>
+                    <div className="flex items-center gap-2 mt-1 text-sm text-gray-600 capitalize">
+                      {getRoleIcon(selectedUserData.role)}
+                      {selectedUserData.role}
                     </div>
                   </div>
+                </div>
 
-                  <div className="text-right">
-                    <div className="text-2xl font-bold text-blue-900">
-                      {formatDuration(monthlyStats.totalMinutes)}
-                    </div>
-                    <div className="text-sm text-gray-600">
-                      Total Hours This Month
-                    </div>
-                    <div className="text-xs text-gray-500 mt-1">
-                      {monthlyStats.totalSessions} sessions •{" "}
-                      {monthlyStats.workingDaysInMonth} working days
-                    </div>
+                <div className="text-right">
+                  <div className="text-2xl font-bold text-blue-800">
+                    {formatDuration(monthlyStats.totalMinutes)}
+                  </div>
+                  <div className="text-sm text-gray-600">
+                    Total Hours This Month
+                  </div>
+                  <div className="text-xs text-gray-500 mt-1">
+                    {monthlyStats.totalSessions} sessions •{" "}
+                    {monthlyStats.workingDaysInMonth} working days
                   </div>
                 </div>
               </CardContent>
