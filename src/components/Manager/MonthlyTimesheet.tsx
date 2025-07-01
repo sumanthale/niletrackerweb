@@ -25,6 +25,7 @@ import toast from "react-hot-toast";
 
 interface CalendarDay {
   date: number;
+  fullDate: Date;
   isCurrentMonth: boolean;
   isToday: boolean;
   sessions: TimeSession[];
@@ -78,7 +79,7 @@ export function MonthlyTimesheet() {
     return userOptions.find((option) => option.value === selectedUser) || null;
   }, [userOptions, selectedUser]);
 
-  // Memoized calendar calculations
+  // Fixed calendar calculations
   const calendarData = useMemo(() => {
     const year = currentMonth.getFullYear();
     const month = currentMonth.getMonth();
@@ -87,17 +88,23 @@ export function MonthlyTimesheet() {
     const firstDay = new Date(year, month, 1);
     const lastDay = new Date(year, month + 1, 0);
 
-    // Get first day of calendar (might be from previous month)
+    // Get first day of calendar (start from Monday)
     const startDate = new Date(firstDay);
-    startDate.setDate(startDate.getDate() - firstDay.getDay());
+    const firstDayOfWeek = firstDay.getDay();
+    // Adjust to start from Monday (0 = Sunday, 1 = Monday, etc.)
+    const daysToSubtract = firstDayOfWeek === 0 ? 6 : firstDayOfWeek - 1;
+    startDate.setDate(startDate.getDate() - daysToSubtract);
 
-    // Get last day of calendar (might be from next month)
+    // Get last day of calendar (end on Sunday)
     const endDate = new Date(lastDay);
-    endDate.setDate(endDate.getDate() + (6 - lastDay.getDay()));
+    const lastDayOfWeek = lastDay.getDay();
+    const daysToAdd = lastDayOfWeek === 0 ? 0 : 7 - lastDayOfWeek;
+    endDate.setDate(endDate.getDate() + daysToAdd);
 
     const days: CalendarDay[] = [];
     const currentDate = new Date(startDate);
     const today = new Date();
+    today.setHours(0, 0, 0, 0); // Reset time for accurate comparison
 
     while (currentDate <= endDate) {
       const dateString = currentDate.toISOString().split("T")[0];
@@ -109,10 +116,14 @@ export function MonthlyTimesheet() {
         0
       );
 
+      const dayDate = new Date(currentDate);
+      dayDate.setHours(0, 0, 0, 0);
+
       days.push({
         date: currentDate.getDate(),
+        fullDate: new Date(currentDate),
         isCurrentMonth: currentDate.getMonth() === month,
-        isToday: currentDate.toDateString() === today.toDateString(),
+        isToday: dayDate.getTime() === today.getTime(),
         sessions: daySessions,
         totalMinutes,
       });
@@ -464,6 +475,7 @@ export function MonthlyTimesheet() {
     );
   }
 
+  // Fixed week days array starting with Monday
   const weekDays = ["MON", "TUE", "WED", "THU", "FRI", "SAT", "SUN"];
 
   return (
@@ -510,12 +522,12 @@ export function MonthlyTimesheet() {
       </div>
 
       {/* Enhanced User Selection Card */}
-      <Card className="border-2 border-blue-200 bg-gradient-to-r from-blue-50/50 to-indigo-50/50 shadow-lg">
+      <Card variant="elevated" className="border-2 border-blue-200 bg-gradient-to-r from-blue-50/50 to-indigo-50/50 shadow-medium">
         <CardHeader className="pb-4">
           <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
             <div className="space-y-1">
               <CardTitle className="flex items-center gap-3 text-xl">
-                <div className="p-2 bg-blue-100 rounded-lg">
+                <div className="p-2 bg-blue-100 rounded-xl">
                   <Search className="w-5 h-5 text-blue-600" />
                 </div>
                 Select Team Member
@@ -564,8 +576,8 @@ export function MonthlyTimesheet() {
               variant="outline"
               onClick={() => navigateMonth("prev")}
               className="gap-2"
+              leftIcon={<ChevronLeft className="w-4 h-4" />}
             >
-              <ChevronLeft className="w-4 h-4" />
               Previous Month
             </Button>
 
@@ -593,9 +605,9 @@ export function MonthlyTimesheet() {
               onClick={() => navigateMonth("next")}
               disabled={!canNavigateNext}
               className="gap-2"
+              rightIcon={<ChevronRight className="w-4 h-4" />}
             >
               Next Month
-              <ChevronRight className="w-4 h-4" />
             </Button>
           </div>
 
@@ -621,14 +633,14 @@ export function MonthlyTimesheet() {
       {selectedUser && (
         <>
           {/* Calendar */}
-          <Card className="bg-white border border-gray-200 shadow-sm rounded-xl">
+          <Card variant="elevated" className="shadow-medium">
             <CardContent className="p-6">
               {/* Calendar Header */}
               <div className="grid grid-cols-7 gap-1 mb-4 text-center">
                 {weekDays.map((day) => (
                   <div
                     key={day}
-                    className="text-sm font-semibold text-muted-foreground"
+                    className="text-sm font-semibold text-muted-foreground py-2"
                   >
                     {day}
                   </div>
@@ -641,12 +653,12 @@ export function MonthlyTimesheet() {
                   <div
                     key={index}
                     className={cn(
-                      "rounded-lg border p-3 h-[110px] flex flex-col justify-between transition-all duration-200 group",
-                      "hover:shadow-sm hover:ring-1 hover:ring-gray-200",
+                      "rounded-xl border p-3 h-[110px] flex flex-col justify-between transition-all duration-200 group",
+                      "hover:shadow-soft hover:ring-1 hover:ring-gray-200",
                       !day.isCurrentMonth &&
                         "bg-muted/20 text-muted-foreground",
                       day.isToday &&
-                        "border-blue-500 bg-blue-50/50 ring-2 ring-blue-400"
+                        "border-blue-500 bg-blue-50/50 ring-2 ring-blue-400 shadow-soft"
                     )}
                   >
                     {/* Date Header */}
@@ -673,10 +685,10 @@ export function MonthlyTimesheet() {
                     {day.totalMinutes > 0 && (
                       <div
                         className={cn(
-                          "text-[11px] font-semibold mt-auto w-fit px-2 py-0.5 rounded-md",
+                          "text-[11px] font-semibold mt-auto w-fit px-2 py-0.5 rounded-lg",
                           getTimeBgColor(day.totalMinutes),
                           getTimeColor(day.totalMinutes),
-                          "transition-colors duration-150"
+                          "transition-colors duration-150 shadow-soft"
                         )}
                       >
                         {formatDuration(day.totalMinutes)}
@@ -690,11 +702,11 @@ export function MonthlyTimesheet() {
 
           {/* Selected User Info */}
           {selectedUserData && (
-            <Card className="bg-gradient-to-r from-blue-50 to-indigo-50 border border-blue-200">
+            <Card variant="elevated" className="bg-gradient-to-r from-blue-50 to-indigo-50 border-2 border-blue-200 shadow-medium">
               <CardContent className="p-6">
                 <div className="flex items-center justify-between">
                   <div className="flex items-center gap-4">
-                    <Avatar className="h-12 w-12 border-2 border-white shadow-sm">
+                    <Avatar className="h-12 w-12 border-2 border-white shadow-soft">
                       <AvatarImage
                         src={selectedUserData.photoURL}
                         alt={selectedUserData.fullName}
