@@ -16,7 +16,7 @@ const StatCard = ({
     <Card
       className={`border-2 border-${color}-200 bg-gradient-to-br from-${color}-50 to-${color}-100`}
     >
-      <CardContent className="p-4 sm:p-6">
+      <CardContent className="p-3">
         <div className="flex items-center justify-between">
           <div className="space-y-1 sm:space-y-2">
             <p className={`text-xs sm:text-sm font-medium text-${color}-700`}>

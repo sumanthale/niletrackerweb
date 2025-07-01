@@ -160,7 +160,7 @@ function AppContent() {
       </div>
 
       {/* Main content with smooth transitions */}
-      <div className="flex-1 flex flex-col min-w-0 h-screen transition-all duration-300 ease-in-out">
+      <div className="flex-1 flex flex-col min-w-0 transition-all duration-300 ease-in-out">
         {/* Header with improved styling */}
         <div className="border-b bg-background/95 backdrop-blur-sm px-4 py-3 flex items-center justify-between shadow-sm">
           {/* Mobile menu button with hover effects */}
@@ -196,7 +196,7 @@ function AppContent() {
 
         {/* Main content area with smooth transitions */}
         <main className="flex-1 overflow-auto transition-all duration-300 ease-in-out">
-          <div className="container max-w-7xl mx-auto p-6">
+          <div className="container mx-auto p-6">
             {renderContent()}
           </div>
         </main>

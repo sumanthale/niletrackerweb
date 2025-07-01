@@ -1,13 +1,13 @@
-import React, { useState, useEffect, useMemo, useCallback } from 'react';
-import { collection, query, where, getDocs, orderBy } from 'firebase/firestore';
-import { db } from '../../lib/firebase';
-import { useAuth } from '../../contexts/AuthContext';
-import { TimeSession, User } from '../../types';
-import { Card, CardContent, CardHeader, CardTitle } from '../ui/Card';
-import { Button } from '../ui/Button';
-import { Avatar, AvatarFallback, AvatarImage } from '../ui/Avatar';
-import Select from 'react-select';
-import { 
+import React, { useState, useEffect, useMemo, useCallback } from "react";
+import { collection, query, where, getDocs, orderBy } from "firebase/firestore";
+import { db } from "../../lib/firebase";
+import { useAuth } from "../../contexts/AuthContext";
+import { TimeSession, User } from "../../types";
+import { Card, CardContent, CardHeader, CardTitle } from "../ui/Card";
+import { Button } from "../ui/Button";
+import { Avatar, AvatarFallback, AvatarImage } from "../ui/Avatar";
+import Select from "react-select";
+import {
   Calendar as CalendarIcon,
   ChevronLeft,
   ChevronRight,
@@ -18,10 +18,10 @@ import {
   Timer,
   Crown,
   UserCheck,
-  Search
-} from 'lucide-react';
-import { formatDuration, cn } from '../../lib/utils';
-import toast from 'react-hot-toast';
+  Search,
+} from "lucide-react";
+import { formatDuration, cn } from "../../lib/utils";
+import toast from "react-hot-toast";
 
 interface CalendarDay {
   date: number;
@@ -41,7 +41,7 @@ export function MonthlyTimesheet() {
   const { user } = useAuth();
   const [sessions, setSessions] = useState<TimeSession[]>([]);
   const [users, setUsers] = useState<User[]>([]);
-  const [selectedUser, setSelectedUser] = useState<string>(''); // No default selection
+  const [selectedUser, setSelectedUser] = useState<string>(""); // No default selection
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
   const [currentMonth, setCurrentMonth] = useState(new Date());
@@ -52,68 +52,74 @@ export function MonthlyTimesheet() {
     const month = date.getMonth();
     const daysInMonth = new Date(year, month + 1, 0).getDate();
     let workingDays = 0;
-    
+
     for (let day = 1; day <= daysInMonth; day++) {
       const dayOfWeek = new Date(year, month, day).getDay();
-      if (dayOfWeek !== 0 && dayOfWeek !== 6) { // Not Sunday (0) or Saturday (6)
+      if (dayOfWeek !== 0 && dayOfWeek !== 6) {
+        // Not Sunday (0) or Saturday (6)
         workingDays++;
       }
     }
-    
+
     return workingDays;
   }, []);
 
   // Prepare user options for react-select
   const userOptions: UserOption[] = useMemo(() => {
-    return users.map(userData => ({
+    return users.map((userData) => ({
       value: userData.id,
       label: userData.fullName,
-      user: userData
+      user: userData,
     }));
   }, [users]);
 
   // Get selected user option
   const selectedUserOption = useMemo(() => {
-    return userOptions.find(option => option.value === selectedUser) || null;
+    return userOptions.find((option) => option.value === selectedUser) || null;
   }, [userOptions, selectedUser]);
 
   // Memoized calendar calculations
   const calendarData = useMemo(() => {
     const year = currentMonth.getFullYear();
     const month = currentMonth.getMonth();
-    
+
     // Get first day of month and last day of month
     const firstDay = new Date(year, month, 1);
     const lastDay = new Date(year, month + 1, 0);
-    
+
     // Get first day of calendar (might be from previous month)
     const startDate = new Date(firstDay);
     startDate.setDate(startDate.getDate() - firstDay.getDay());
-    
+
     // Get last day of calendar (might be from next month)
     const endDate = new Date(lastDay);
     endDate.setDate(endDate.getDate() + (6 - lastDay.getDay()));
-    
+
     const days: CalendarDay[] = [];
     const currentDate = new Date(startDate);
     const today = new Date();
-    
+
     while (currentDate <= endDate) {
-      const dateString = currentDate.toISOString().split('T')[0];
-      const daySessions = sessions.filter(session => session.date === dateString);
-      const totalMinutes = daySessions.reduce((sum, session) => sum + session.totalMinutes, 0);
-      
+      const dateString = currentDate.toISOString().split("T")[0];
+      const daySessions = sessions.filter(
+        (session) => session.date === dateString
+      );
+      const totalMinutes = daySessions.reduce(
+        (sum, session) => sum + session.totalMinutes,
+        0
+      );
+
       days.push({
         date: currentDate.getDate(),
         isCurrentMonth: currentDate.getMonth() === month,
         isToday: currentDate.toDateString() === today.toDateString(),
         sessions: daySessions,
-        totalMinutes
+        totalMinutes,
       });
-      
+
       currentDate.setDate(currentDate.getDate() + 1);
     }
-    
+
     return days;
   }, [currentMonth, sessions]);
 
@@ -122,21 +128,24 @@ export function MonthlyTimesheet() {
     const totalMinutes = sessions.reduce((acc, s) => acc + s.totalMinutes, 0);
     const workingDaysInMonth = getWorkingDaysInMonth(currentMonth);
     const expectedMinutes = workingDaysInMonth * 8 * 60; // 8 hours per day
-    
+
     return {
       totalMinutes,
       expectedMinutes,
       workingDaysInMonth,
       totalSessions: sessions.length,
-      averageDailyHours: sessions.length > 0 ? totalMinutes / sessions.length / 60 : 0
+      averageDailyHours:
+        sessions.length > 0 ? totalMinutes / sessions.length / 60 : 0,
     };
   }, [sessions, currentMonth, getWorkingDaysInMonth]);
 
   // Check if current month is the actual current month
   const isCurrentMonth = useMemo(() => {
     const now = new Date();
-    return currentMonth.getMonth() === now.getMonth() && 
-           currentMonth.getFullYear() === now.getFullYear();
+    return (
+      currentMonth.getMonth() === now.getMonth() &&
+      currentMonth.getFullYear() === now.getFullYear()
+    );
   }, [currentMonth]);
 
   // Check if we can navigate to next month (prevent future months)
@@ -165,13 +174,13 @@ export function MonthlyTimesheet() {
   const fetchAvailableUsers = useCallback(async () => {
     try {
       let usersQuery;
-      
-      if (user?.role === 'admin') {
-        usersQuery = query(collection(db, 'users'));
-      } else if (user?.role === 'manager') {
+
+      if (user?.role === "admin") {
+        usersQuery = query(collection(db, "users"));
+      } else if (user?.role === "manager") {
         usersQuery = query(
-          collection(db, 'users'),
-          where('managerId', '==', user?.id)
+          collection(db, "users"),
+          where("managerId", "==", user?.id)
         );
       } else {
         setLoading(false);
@@ -179,91 +188,115 @@ export function MonthlyTimesheet() {
       }
 
       const querySnapshot = await getDocs(usersQuery);
-      const usersData = querySnapshot.docs.map(doc => ({
+      const usersData = querySnapshot.docs.map((doc) => ({
         id: doc.id,
         ...doc.data(),
-        createdAt: doc.data().createdAt?.toDate ? doc.data().createdAt.toDate() : new Date(doc.data().createdAt || Date.now()),
-        lastLogin: doc.data().lastLogin?.toDate ? doc.data().lastLogin.toDate() : doc.data().lastLogin ? new Date(doc.data().lastLogin) : undefined
+        createdAt: doc.data().createdAt?.toDate
+          ? doc.data().createdAt.toDate()
+          : new Date(doc.data().createdAt || Date.now()),
+        lastLogin: doc.data().lastLogin?.toDate
+          ? doc.data().lastLogin.toDate()
+          : doc.data().lastLogin
+          ? new Date(doc.data().lastLogin)
+          : undefined,
       })) as User[];
-      
-      const filteredUsers = user?.role === 'manager' 
-        ? usersData.filter(u => u.role !== 'admin')
-        : usersData;
-      
+
+      const filteredUsers =
+        user?.role === "manager"
+          ? usersData.filter((u) => u.role !== "admin")
+          : usersData;
+
       setUsers(filteredUsers);
       // Don't auto-select any user - let user choose
       setLoading(false);
     } catch (error) {
-      console.error('Error fetching users:', error);
-      toast.error('Failed to load users');
+      console.error("Error fetching users:", error);
+      toast.error("Failed to load users");
       setLoading(false);
     }
   }, [user]);
 
-  const fetchMonthlyUserSessions = useCallback(async (userId: string) => {
-    try {
-      setRefreshing(true);
-      
-      // Get start and end of the month
-      const startOfMonth = new Date(currentMonth.getFullYear(), currentMonth.getMonth(), 1);
-      const endOfMonth = new Date(currentMonth.getFullYear(), currentMonth.getMonth() + 1, 0);
-      
-      const startDate = startOfMonth.toISOString().split('T')[0];
-      const endDate = endOfMonth.toISOString().split('T')[0];
+  const fetchMonthlyUserSessions = useCallback(
+    async (userId: string) => {
+      try {
+        setRefreshing(true);
 
-      const sessionsQuery = query(
-        collection(db, 'sessions'),
-        where('userId', '==', userId),
-        where('date', '>=', startDate),
-        where('date', '<=', endDate),
-        orderBy('date', 'desc')
-      );
-      
-      const querySnapshot = await getDocs(sessionsQuery);
-      const sessionsData = querySnapshot.docs.map(doc => {
-        const data = doc.data();
-        return {
-          id: doc.id,
-          userId: data.userId,
-          userName: data.userName,
-          userEmail: data.userEmail,
-          date: data.date,
-          clockIn: data.clockIn,
-          clockOut: data.clockOut,
-          totalMinutes: data.totalMinutes || 0,
-          idleMinutes: data.idleMinutes || 0,
-          productiveHours: data.productiveHours || 0,
-          screenshots: data.screenshots || [],
-          status: data.status || 'submitted',
-          approvalStatus: data.approvalStatus || data.status || 'submitted',
-          lessHoursComment: data.lessHoursComment,
-          managerComment: data.managerComment,
-          managerId: data.managerId,
-          createdAt: data.createdAt?.toDate ? data.createdAt.toDate() : new Date(data.createdAt || Date.now()),
-          updatedAt: data.updatedAt?.toDate ? data.updatedAt.toDate() : new Date(data.updatedAt || Date.now())
-        };
-      }) as TimeSession[];
-      
-      const selectedUserData = users.find(u => u.id === userId);
-      const enrichedSessions = sessionsData.map(session => ({
-        ...session,
-        userName: session.userName || selectedUserData?.fullName || 'Unknown User',
-        userEmail: session.userEmail || selectedUserData?.email || 'unknown@email.com'
-      }));
-      
-      setSessions(enrichedSessions);
-    } catch (error) {
-      console.error('Error fetching monthly sessions:', error);
-      toast.error('Failed to load monthly sessions');
-    } finally {
-      setRefreshing(false);
-    }
-  }, [currentMonth, users]);
+        // Get start and end of the month
+        const startOfMonth = new Date(
+          currentMonth.getFullYear(),
+          currentMonth.getMonth(),
+          1
+        );
+        const endOfMonth = new Date(
+          currentMonth.getFullYear(),
+          currentMonth.getMonth() + 1,
+          0
+        );
 
-  const navigateMonth = useCallback((direction: 'prev' | 'next') => {
-    setCurrentMonth(prevMonth => {
+        const startDate = startOfMonth.toISOString().split("T")[0];
+        const endDate = endOfMonth.toISOString().split("T")[0];
+
+        const sessionsQuery = query(
+          collection(db, "sessions"),
+          where("userId", "==", userId),
+          where("date", ">=", startDate),
+          where("date", "<=", endDate),
+          orderBy("date", "desc")
+        );
+
+        const querySnapshot = await getDocs(sessionsQuery);
+        const sessionsData = querySnapshot.docs.map((doc) => {
+          const data = doc.data();
+          return {
+            id: doc.id,
+            userId: data.userId,
+            userName: data.userName,
+            userEmail: data.userEmail,
+            date: data.date,
+            clockIn: data.clockIn,
+            clockOut: data.clockOut,
+            totalMinutes: data.totalMinutes || 0,
+            idleMinutes: data.idleMinutes || 0,
+            productiveHours: data.productiveHours || 0,
+            screenshots: data.screenshots || [],
+            status: data.status || "submitted",
+            approvalStatus: data.approvalStatus || data.status || "submitted",
+            lessHoursComment: data.lessHoursComment,
+            managerComment: data.managerComment,
+            managerId: data.managerId,
+            createdAt: data.createdAt?.toDate
+              ? data.createdAt.toDate()
+              : new Date(data.createdAt || Date.now()),
+            updatedAt: data.updatedAt?.toDate
+              ? data.updatedAt.toDate()
+              : new Date(data.updatedAt || Date.now()),
+          };
+        }) as TimeSession[];
+
+        const selectedUserData = users.find((u) => u.id === userId);
+        const enrichedSessions = sessionsData.map((session) => ({
+          ...session,
+          userName:
+            session.userName || selectedUserData?.fullName || "Unknown User",
+          userEmail:
+            session.userEmail || selectedUserData?.email || "unknown@email.com",
+        }));
+
+        setSessions(enrichedSessions);
+      } catch (error) {
+        console.error("Error fetching monthly sessions:", error);
+        toast.error("Failed to load monthly sessions");
+      } finally {
+        setRefreshing(false);
+      }
+    },
+    [currentMonth, users]
+  );
+
+  const navigateMonth = useCallback((direction: "prev" | "next") => {
+    setCurrentMonth((prevMonth) => {
       const newMonth = new Date(prevMonth);
-      if (direction === 'next') {
+      if (direction === "next") {
         newMonth.setMonth(newMonth.getMonth() + 1);
       } else {
         newMonth.setMonth(newMonth.getMonth() - 1);
@@ -278,43 +311,47 @@ export function MonthlyTimesheet() {
 
   const getRoleIcon = useCallback((role: string) => {
     switch (role) {
-      case 'admin':
+      case "admin":
         return <Crown className="w-3 h-3" />;
-      case 'manager':
+      case "manager":
         return <UserCheck className="w-3 h-3" />;
       default:
         return <Timer className="w-3 h-3" />;
     }
   }, []);
 
-  const selectedUserData = useMemo(() => 
-    users.find(u => u.id === selectedUser), 
+  const selectedUserData = useMemo(
+    () => users.find((u) => u.id === selectedUser),
     [users, selectedUser]
   );
 
   const getTimeColor = (minutes: number) => {
-    if (minutes === 0) return 'text-gray-400';
-    if (minutes < 240) return 'text-red-600'; // Less than 4 hours
-    if (minutes < 360) return 'text-orange-600'; // Less than 6 hours
-    if (minutes < 480) return 'text-yellow-600'; // Less than 8 hours
-    return 'text-green-600'; // 8+ hours
+    if (minutes === 0) return "text-gray-400";
+    if (minutes < 240) return "text-red-600"; // Less than 4 hours
+    if (minutes < 360) return "text-orange-600"; // Less than 6 hours
+    if (minutes < 480) return "text-yellow-600"; // Less than 8 hours
+    return "text-green-600"; // 8+ hours
   };
 
   const getTimeBgColor = (minutes: number) => {
-    if (minutes === 0) return 'bg-gray-100';
-    if (minutes < 240) return 'bg-red-100'; // Less than 4 hours
-    if (minutes < 360) return 'bg-orange-100'; // Less than 6 hours
-    if (minutes < 480) return 'bg-yellow-100'; // Less than 8 hours
-    return 'bg-green-100'; // 8+ hours
+    if (minutes === 0) return "bg-gray-100";
+    if (minutes < 240) return "bg-red-100"; // Less than 4 hours
+    if (minutes < 360) return "bg-orange-100"; // Less than 6 hours
+    if (minutes < 480) return "bg-yellow-100"; // Less than 8 hours
+    return "bg-green-100"; // 8+ hours
   };
 
   // Custom option component for react-select
   const CustomOption = ({ data, ...props }: any) => (
-    <div {...props.innerProps} className="flex items-center gap-3 p-3 hover:bg-gray-50 cursor-pointer">
+    <div
+      {...props.innerProps}
+      className="flex items-center gap-3 p-3 hover:bg-gray-50 cursor-pointer"
+    >
       <Avatar className="h-8 w-8">
         <AvatarImage src={data.user.photoURL} alt={data.user.fullName} />
         <AvatarFallback className="text-xs">
-          {data.user.fullName?.slice(0, 2).toUpperCase() || data.user.email?.slice(0, 2).toUpperCase()}
+          {data.user.fullName?.slice(0, 2).toUpperCase() ||
+            data.user.email?.slice(0, 2).toUpperCase()}
         </AvatarFallback>
       </Avatar>
       <div className="flex-1">
@@ -322,7 +359,9 @@ export function MonthlyTimesheet() {
         <div className="text-sm text-gray-500">{data.user.email}</div>
         <div className="flex items-center gap-1 mt-1">
           {getRoleIcon(data.user.role)}
-          <span className="text-xs text-gray-600 capitalize">{data.user.role}</span>
+          <span className="text-xs text-gray-600 capitalize">
+            {data.user.role}
+          </span>
         </div>
       </div>
     </div>
@@ -334,7 +373,8 @@ export function MonthlyTimesheet() {
       <Avatar className="h-6 w-6">
         <AvatarImage src={data.user.photoURL} alt={data.user.fullName} />
         <AvatarFallback className="text-xs">
-          {data.user.fullName?.slice(0, 2).toUpperCase() || data.user.email?.slice(0, 2).toUpperCase()}
+          {data.user.fullName?.slice(0, 2).toUpperCase() ||
+            data.user.email?.slice(0, 2).toUpperCase()}
         </AvatarFallback>
       </Avatar>
       <span className="font-medium">{data.user.fullName}</span>
@@ -345,45 +385,50 @@ export function MonthlyTimesheet() {
   const customStyles = {
     control: (provided: any, state: any) => ({
       ...provided,
-      minHeight: '48px',
-      border: '2px solid #e5e7eb',
-      borderRadius: '12px',
-      boxShadow: state.isFocused ? '0 0 0 3px rgba(59, 130, 246, 0.1)' : 'none',
-      borderColor: state.isFocused ? '#3b82f6' : '#e5e7eb',
-      '&:hover': {
-        borderColor: '#d1d5db'
-      }
+      minHeight: "48px",
+      border: "2px solid #e5e7eb",
+      borderRadius: "12px",
+      boxShadow: state.isFocused ? "0 0 0 3px rgba(59, 130, 246, 0.1)" : "none",
+      borderColor: state.isFocused ? "#3b82f6" : "#e5e7eb",
+      "&:hover": {
+        borderColor: "#d1d5db",
+      },
     }),
     option: (provided: any, state: any) => ({
       ...provided,
       padding: 0,
-      backgroundColor: state.isSelected ? '#eff6ff' : state.isFocused ? '#f9fafb' : 'white',
-      color: '#111827',
-      '&:hover': {
-        backgroundColor: '#f3f4f6'
-      }
+      backgroundColor: state.isSelected
+        ? "#eff6ff"
+        : state.isFocused
+        ? "#f9fafb"
+        : "white",
+      color: "#111827",
+      "&:hover": {
+        backgroundColor: "#f3f4f6",
+      },
     }),
     singleValue: (provided: any) => ({
       ...provided,
-      color: '#111827'
+      color: "#111827",
     }),
     placeholder: (provided: any) => ({
       ...provided,
-      color: '#9ca3af',
-      fontSize: '14px'
+      color: "#9ca3af",
+      fontSize: "14px",
     }),
     menu: (provided: any) => ({
       ...provided,
-      border: '1px solid #e5e7eb',
-      borderRadius: '12px',
-      boxShadow: '0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04)',
-      zIndex: 50
+      border: "1px solid #e5e7eb",
+      borderRadius: "12px",
+      boxShadow:
+        "0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04)",
+      zIndex: 50,
     }),
     menuList: (provided: any) => ({
       ...provided,
-      maxHeight: '300px',
-      padding: '8px'
-    })
+      maxHeight: "300px",
+      padding: "8px",
+    }),
   };
 
   if (loading) {
@@ -391,7 +436,9 @@ export function MonthlyTimesheet() {
       <div className="flex items-center justify-center h-64">
         <div className="text-center space-y-4">
           <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary mx-auto"></div>
-          <p className="text-sm text-muted-foreground">Loading monthly timesheets...</p>
+          <p className="text-sm text-muted-foreground">
+            Loading monthly timesheets...
+          </p>
         </div>
       </div>
     );
@@ -407,10 +454,9 @@ export function MonthlyTimesheet() {
           <div>
             <h3 className="text-xl font-semibold mb-2">No Users Found</h3>
             <p className="text-muted-foreground">
-              {user?.role === 'admin' 
-                ? 'No users are available in the system yet.' 
-                : 'You don\'t have any users assigned to you yet.'
-              }
+              {user?.role === "admin"
+                ? "No users are available in the system yet."
+                : "You don't have any users assigned to you yet."}
             </p>
           </div>
         </div>
@@ -418,37 +464,47 @@ export function MonthlyTimesheet() {
     );
   }
 
-  const weekDays = ['MON', 'TUE', 'WED', 'THU', 'FRI', 'SAT', 'SUN'];
+  const weekDays = ["MON", "TUE", "WED", "THU", "FRI", "SAT", "SUN"];
 
   return (
     <div className="space-y-6">
       {/* Header */}
-      <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-4">
+      <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+        {/* Title & Subtitle */}
         <div>
-          <h1 className="text-2xl font-bold text-gray-900">Monthly Timesheet</h1>
-          <p className="text-gray-600 mt-1">Track and manage monthly work hours</p>
+          <h1 className="text-xl sm:text-2xl font-semibold text-gray-900 leading-tight">
+            Monthly Timesheet
+          </h1>
+          <p className="text-sm text-gray-600">
+            Track and manage monthly work hours
+          </p>
         </div>
-        
-        <div className="flex items-center gap-3">
+
+        {/* Action Buttons */}
+        <div className="flex flex-wrap items-center gap-2 sm:gap-3">
           <Button
             variant="outline"
             size="sm"
-            onClick={() => selectedUser && fetchMonthlyUserSessions(selectedUser)}
+            onClick={() =>
+              selectedUser && fetchMonthlyUserSessions(selectedUser)
+            }
             disabled={refreshing || !selectedUser}
-            className="gap-2"
+            className="flex items-center gap-1.5"
           >
-            <RefreshCw className={`w-4 h-4 ${refreshing ? 'animate-spin' : ''}`} />
-            Refresh
+            <RefreshCw
+              className={cn("w-4 h-4", refreshing && "animate-spin")}
+            />
+            <span>Refresh</span>
           </Button>
-          
-          <Button 
-            variant="outline" 
-            size="sm" 
-            className="gap-2"
+
+          <Button
+            variant="outline"
+            size="sm"
+            className="flex items-center gap-1.5"
             disabled={!selectedUser}
           >
             <Download className="w-4 h-4" />
-            Export
+            <span>Export</span>
           </Button>
         </div>
       </div>
@@ -470,7 +526,9 @@ export function MonthlyTimesheet() {
             </div>
             <div className="flex items-center gap-2">
               <span className="text-sm text-gray-600">Available:</span>
-              <span className="font-semibold text-blue-600">{users.length} users</span>
+              <span className="font-semibold text-blue-600">
+                {users.length} users
+              </span>
             </div>
           </div>
         </CardHeader>
@@ -483,11 +541,11 @@ export function MonthlyTimesheet() {
             </label>
             <Select
               value={selectedUserOption}
-              onChange={(option) => setSelectedUser(option?.value || '')}
+              onChange={(option) => setSelectedUser(option?.value || "")}
               options={userOptions}
               components={{
                 Option: CustomOption,
-                SingleValue: CustomSingleValue
+                SingleValue: CustomSingleValue,
               }}
               styles={customStyles}
               placeholder="Search by name, email, or role..."
@@ -504,16 +562,19 @@ export function MonthlyTimesheet() {
           <div className="flex items-center justify-between">
             <Button
               variant="outline"
-              onClick={() => navigateMonth('prev')}
+              onClick={() => navigateMonth("prev")}
               className="gap-2"
             >
               <ChevronLeft className="w-4 h-4" />
               Previous Month
             </Button>
-            
+
             <div className="text-center">
               <h3 className="text-lg font-semibold">
-                {currentMonth.toLocaleDateString('en-US', { month: 'long', year: 'numeric' })}
+                {currentMonth.toLocaleDateString("en-US", {
+                  month: "long",
+                  year: "numeric",
+                })}
               </h3>
               {!isCurrentMonth && (
                 <Button
@@ -526,10 +587,10 @@ export function MonthlyTimesheet() {
                 </Button>
               )}
             </div>
-            
+
             <Button
               variant="outline"
-              onClick={() => navigateMonth('next')}
+              onClick={() => navigateMonth("next")}
               disabled={!canNavigateNext}
               className="gap-2"
             >
@@ -544,9 +605,12 @@ export function MonthlyTimesheet() {
               <div className="w-16 h-16 bg-blue-100 rounded-2xl flex items-center justify-center mx-auto mb-4">
                 <Search className="w-8 h-8 text-blue-600" />
               </div>
-              <h3 className="text-lg font-semibold text-gray-900 mb-2">Select a Team Member</h3>
+              <h3 className="text-lg font-semibold text-gray-900 mb-2">
+                Select a Team Member
+              </h3>
               <p className="text-gray-600 max-w-md mx-auto">
-                Use the search dropdown above to find and select a team member to view their monthly timesheet.
+                Use the search dropdown above to find and select a team member
+                to view their monthly timesheet.
               </p>
             </div>
           )}
@@ -557,13 +621,16 @@ export function MonthlyTimesheet() {
       {selectedUser && (
         <>
           {/* Calendar */}
-          <Card className="bg-white border border-gray-200">
+          <Card className="bg-white border border-gray-200 shadow-sm rounded-xl">
             <CardContent className="p-6">
               {/* Calendar Header */}
-              <div className="grid grid-cols-7 gap-1 mb-4">
+              <div className="grid grid-cols-7 gap-1 mb-4 text-center">
                 {weekDays.map((day) => (
-                  <div key={day} className="text-center py-2">
-                    <span className="text-sm font-medium text-gray-600">{day}</span>
+                  <div
+                    key={day}
+                    className="text-sm font-semibold text-muted-foreground"
+                  >
+                    {day}
                   </div>
                 ))}
               </div>
@@ -574,34 +641,44 @@ export function MonthlyTimesheet() {
                   <div
                     key={index}
                     className={cn(
-                      "min-h-[100px] p-2 border border-gray-100 rounded-lg transition-all hover:bg-gray-50",
-                      !day.isCurrentMonth && "bg-gray-50/50 text-gray-400",
-                      day.isToday && "ring-2 ring-blue-500 bg-blue-50"
+                      "rounded-lg border p-3 h-[110px] flex flex-col justify-between transition-all duration-200 group",
+                      "hover:shadow-sm hover:ring-1 hover:ring-gray-200",
+                      !day.isCurrentMonth &&
+                        "bg-muted/20 text-muted-foreground",
+                      day.isToday &&
+                        "border-blue-500 bg-blue-50/50 ring-2 ring-blue-400"
                     )}
                   >
-                    {/* Date Number */}
-                    <div className="flex items-center justify-between mb-2">
-                      <span className={cn(
-                        "text-sm font-medium",
-                        day.isToday && "text-blue-600 font-bold",
-                        !day.isCurrentMonth && "text-gray-400"
-                      )}>
+                    {/* Date Header */}
+                    <div className="flex items-center justify-between">
+                      <span
+                        className={cn(
+                          "text-sm font-medium",
+                          day.isToday
+                            ? "text-blue-600 font-bold"
+                            : "text-gray-700",
+                          !day.isCurrentMonth && "text-gray-400"
+                        )}
+                      >
                         {day.date}
                       </span>
                       {day.isToday && (
-                        <span className="text-xs bg-green-500 text-white px-1.5 py-0.5 rounded-full font-medium">
+                        <span className="text-[10px] px-2 py-0.5 bg-blue-600 text-white rounded-full">
                           Today
                         </span>
                       )}
                     </div>
 
-                    {/* Time Entry */}
+                    {/* Time Entry Tag */}
                     {day.totalMinutes > 0 && (
-                      <div className={cn(
-                        "text-xs font-medium px-2 py-1 rounded-md",
-                        getTimeBgColor(day.totalMinutes),
-                        getTimeColor(day.totalMinutes)
-                      )}>
+                      <div
+                        className={cn(
+                          "text-[11px] font-semibold mt-auto w-fit px-2 py-0.5 rounded-md",
+                          getTimeBgColor(day.totalMinutes),
+                          getTimeColor(day.totalMinutes),
+                          "transition-colors duration-150"
+                        )}
+                      >
                         {formatDuration(day.totalMinutes)}
                       </div>
                     )}
@@ -618,26 +695,39 @@ export function MonthlyTimesheet() {
                 <div className="flex items-center justify-between">
                   <div className="flex items-center gap-4">
                     <Avatar className="h-12 w-12 border-2 border-white shadow-sm">
-                      <AvatarImage src={selectedUserData.photoURL} alt={selectedUserData.fullName} />
+                      <AvatarImage
+                        src={selectedUserData.photoURL}
+                        alt={selectedUserData.fullName}
+                      />
                       <AvatarFallback className="text-lg font-semibold bg-gradient-to-br from-blue-500 to-purple-600 text-white">
-                        {selectedUserData.fullName?.slice(0, 2).toUpperCase() || selectedUserData.email?.slice(0, 2).toUpperCase()}
+                        {selectedUserData.fullName?.slice(0, 2).toUpperCase() ||
+                          selectedUserData.email?.slice(0, 2).toUpperCase()}
                       </AvatarFallback>
                     </Avatar>
                     <div>
-                      <h3 className="text-lg font-semibold text-gray-900">{selectedUserData.fullName}</h3>
+                      <h3 className="text-lg font-semibold text-gray-900">
+                        {selectedUserData.fullName}
+                      </h3>
                       <p className="text-gray-600">{selectedUserData.email}</p>
                       <div className="flex items-center gap-2 mt-1">
                         {getRoleIcon(selectedUserData.role)}
-                        <span className="text-sm text-gray-600 capitalize">{selectedUserData.role}</span>
+                        <span className="text-sm text-gray-600 capitalize">
+                          {selectedUserData.role}
+                        </span>
                       </div>
                     </div>
                   </div>
-                  
+
                   <div className="text-right">
-                    <div className="text-2xl font-bold text-blue-900">{formatDuration(monthlyStats.totalMinutes)}</div>
-                    <div className="text-sm text-gray-600">Total Hours This Month</div>
+                    <div className="text-2xl font-bold text-blue-900">
+                      {formatDuration(monthlyStats.totalMinutes)}
+                    </div>
+                    <div className="text-sm text-gray-600">
+                      Total Hours This Month
+                    </div>
                     <div className="text-xs text-gray-500 mt-1">
-                      {monthlyStats.totalSessions} sessions • {monthlyStats.workingDaysInMonth} working days
+                      {monthlyStats.totalSessions} sessions •{" "}
+                      {monthlyStats.workingDaysInMonth} working days
                     </div>
                   </div>
                 </div>

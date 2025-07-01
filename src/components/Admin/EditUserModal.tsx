@@ -121,9 +121,9 @@ export function EditUserModal({
       const updates: Partial<User> = {
         fullName: formData.fullName,
         role: formData.role as User["role"],
-        managerId: formData.managerId || undefined,
+        managerId: formData.role === "manager" ? null : formData.managerId || null,
         isActive: formData.isActive,
-        photoURL: profileImage || undefined,
+        photoURL: profileImage || null,
         updatedAt: new Date(),
       };
 

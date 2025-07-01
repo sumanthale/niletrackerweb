@@ -349,18 +349,6 @@ export function UserManagement() {
           color="blue"
         />
         <StatCard
-          title="Active"
-          value={stats.activeUsers}
-          icon={Shield}
-          color="green"
-        />
-        <StatCard
-          title="Revoked"
-          value={stats.revokedUsers}
-          icon={ShieldOff}
-          color="red"
-        />
-        <StatCard
           title="Managers"
           value={stats.managerCount}
           icon={UserCheck}
@@ -371,6 +359,18 @@ export function UserManagement() {
           value={stats.employeeCount}
           icon={Timer}
           color="orange"
+        />
+        <StatCard
+          title="Active"
+          value={stats.activeUsers}
+          icon={Shield}
+          color="green"
+        />
+        <StatCard
+          title="Revoked"
+          value={stats.revokedUsers}
+          icon={ShieldOff}
+          color="red"
         />
       </div>
 

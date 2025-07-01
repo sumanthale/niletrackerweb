@@ -3,12 +3,12 @@ export interface User {
   uid: string;
   email: string;
   fullName: string;
-  role: 'admin' | 'manager' | 'employee';
-  managerId?: string;
+  role: "admin" | "manager" | "employee";
+  managerId?: string | null;
   createdAt: Date;
   lastLogin?: Date;
   updatedAt?: Date;
-  photoURL?: string;
+  photoURL?: string | null;
   isActive?: boolean; // For access control
 }
 
@@ -24,7 +24,7 @@ export interface TimeSession {
   idleMinutes: number;
   productiveHours: number;
   screenshots: Screenshot[];
-  status: 'submitted' | 'approved' | 'disapproved';
+  status: "submitted" | "approved" | "disapproved";
   approvalStatus: string;
   lessHoursComment?: string;
   managerComment?: string;

@@ -24,7 +24,6 @@ export function SimpleTable<T>({
 }: SimpleTableProps<T>) {
   return (
     <div className={cn("w-full", className)}>
-      <div className="overflow-x-auto">
         <table className="w-full border-collapse">
           <thead>
             <tr className="border-b border-gray-200 bg-gray-50">
@@ -72,7 +71,6 @@ export function SimpleTable<T>({
             )}
           </tbody>
         </table>
-      </div>
     </div>
   );
 }
